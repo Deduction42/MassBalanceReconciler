@@ -1,0 +1,7 @@
+(1) Component lists will be represented as vectors where every index refers to a universal list of chemical components.
+
+(2) Component "Types" will refer to a certain subset of these components referred to by numerical index. "Water" only includes water-soluble components. "Hydrocarbon" only includes hydrocarbons. This reduces dimensions in the optimizer. 
+
+(3) Type-indexers with components will have non-zero indices for relevant components to map to the vector. Names are not required.
+
+(4) Named indexing requres a variable passed from the global COMPONENT_INDEXER (named tuple) variable.

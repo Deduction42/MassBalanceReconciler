@@ -1,0 +1,5 @@
+Name,Molecular Weight,Liquid Vol,Solid Vol,Critical Temperature,Melting Point,Heat of Fusion,Boiling Point,Heat of Evaporation
+CO2,44,0.00625,0.00625,582,195,7949.6,288,734.8
+H2O,18,0.001,0.001,647.1,273,6008.224,373,4065
+CH3OH,32,0.001262,0.001262,512,175.4,3177,337.7,37340
+C2H5OH,46,0.001266,0.001266,514,159,4900,351.37,38600

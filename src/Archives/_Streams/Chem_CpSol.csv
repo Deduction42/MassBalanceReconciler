@@ -1,0 +1,7 @@
+Name,Tmin,Tmax,C1
+Exponent,,,0
+Scale (to J/mol),,,1
+H2O,0,2000,38.09
+CH3OH,0,2000,149.652
+C2H5OH,0,2000,224.478
+CO2,0,2000,74.826

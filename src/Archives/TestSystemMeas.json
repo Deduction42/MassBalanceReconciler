@@ -1,0 +1,68 @@
+[
+    {
+        "id":"FI-101",
+        "class": "MassFlowMeasurement",
+        "asset_id": "S1-1",
+        "stdev": 0.2,
+        "to_SI": [1,0]
+    },
+    {
+        "id":"FI-102",
+        "class": "MassFlowMeasurement",
+        "asset_id": "SH1-1",
+        "stdev": 0.2,
+        "to_SI": [1,0]
+    },
+    {
+        "id":"PI-101",
+        "class": "PressureMeasurement",
+        "asset_id": "S1-1",
+        "stdev": 2.0,
+        "to_SI": [1,0]
+    },
+    {
+        "id":"PI-102",
+        "class": "PressureMeasurement",
+        "asset_id": "SH1-1",
+        "stdev": 2.0,
+        "to_SI": [1,0]
+    },
+    {
+        "id":"TI-101",
+        "class": "TemperatureMeasurement",
+        "asset_id": "S1-1",
+        "stdev": 1.0,
+        "to_SI": [1,273]
+    },
+    {
+        "id":"TI-102",
+        "class": "TemperatureMeasurement",
+        "asset_id": "SH1-1",
+        "stdev": 1.0,
+        "to_SI": [1,273]
+    },
+    {
+        "id":"AI-101-H2O",
+        "class": "MassAnalyzer",
+        "asset_id": "S1-1",
+        "stdev": 0.2,
+        "to_SI": [1,0],
+        "component": "H2O"
+    },
+    {
+        "id":"AI-101-MtOH",
+        "class": "MassAnalyzer",
+        "asset_id": "S1-1",
+        "stdev": 0.2,
+        "to_SI": [1,0],
+        "component": "CH3OH"
+    },
+    {
+        "id":"AI-101-EtOH",
+        "class": "MassAnalyzer",
+        "asset_id": "S1-1",
+        "stdev": 0.2,
+        "to_SI": [1,0],
+        "component": "C2H5OH"
+    }
+]

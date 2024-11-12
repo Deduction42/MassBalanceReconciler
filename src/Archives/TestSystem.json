@@ -1,0 +1,44 @@
+[
+    {
+        "id":"HX-1",
+        "class": "HeatExchanger",
+        "heating_inlet":"SH1-1",
+        "heating_outlet":"SH1-2",
+        "cooling_inlet":"S1-1",
+        "cooling_outlet":"S1-2",
+        "specs":{
+            "mCp": 1000,
+            "UA" : 5000,
+            "hot_flow_A_Cf": 0.02,
+            "cold_flow_A_Cf": 0.001,
+            "is_counter_flow": true,
+            "is_cross_flow": false
+        }
+    },
+    {
+        "id": "S1-1",
+        "class": "ProcessStream",
+        "subclass": "IdealLiquid"
+    },
+    {
+        "id": "S1-2",
+        "class": "ProcessStream",
+        "subclass": "IdealLiquid"
+    },
+    {
+        "id": "SH1-1",
+        "class": "ProcessStream",
+        "subclass": "IdealLiquid",
+        "specs": {
+            "components": ["H2O"]
+        }
+    },
+    {
+        "id": "SH1-2",
+        "class": "ProcessStream",
+        "subclass": "IdealLiquid",
+        "specs": {
+            "components": ["H2O"]
+        }
+    }
+]
