@@ -4,8 +4,8 @@ include("_Species.jl")
     id :: Symbol
     t :: T
     p :: T
-    index :: Species{L, Int64, N}
     moles :: Species{L, T, N}
+    index :: Species{L, Int64, N}
     phase :: Symbol = :unknown
 end
 
