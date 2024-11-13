@@ -1,3 +1,19 @@
-(0) Ignore "FieldArray", I don't think this does what I want it to
-(1) Consider a raw component vector that is one level below "MoleStream"
-    SpeciesVec{Species, V<:AbstractVector} (default is SVector{length(Species), T})
+(1) Measurement Indexers start off with "String" parametric type (for looking up raw data tags)
+
+(2) Instantiation comes with new data
+     -  Raw measurements
+     -  Local thermodynamic optimizations (i.e. specific volume)
+     -  Internal instantiated expressions 
+            stream = instantiate(streamind, x::AbstractVector)
+            err = y - f(stream)
+     -  Generate a vector of function wrappers for innovations (z(x) = y - f(x)) (including stdev)
+            This includes all of the balance innovations
+
+(3) Optimize over function wrappers divided by stdev
+
+(4) Use the sparse independent covariance update procedure
+     -  Build an state index generator for every measurement type
+     -  Sparse gradients (to obtain observation matrix C) for each measurement
+     -  Only update covariance along index
+
+        

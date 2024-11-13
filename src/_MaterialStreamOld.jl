@@ -1,29 +1,29 @@
 using StaticArrays
 
 ##################################################################################################################################
-# Chemical species with indexing
+# Chemical speceis
 ##################################################################################################################################
 
 """
-Species{Names::Tuple{Symbol}}
+Labels{Names::Tuple{Symbol}}
 
 A list of chemical species used to index material streams
     This object behaves like NamedTuple{Names}(Base.OneTo(length(Names)))
 """
-struct Species{Names} end
+struct Labels{Names} end
 
-function Base.getindex(::Type{Species{Names}}, i::Symbol) where Names
+function Base.getindex(::Type{Labels{Names}}, i::Symbol) where Names
     nt = NamedTuple{Names}(Base.OneTo(length(Names)))
     return nt[i]
 end
-Base.length(::Type{Species{Names}}) where Names = length(Names)
-species(::Type{Species{Names}}) where Names = Names
+Base.length(::Type{Labels{Names}}) where Names = length(Names)
+names(::Type{Labels{Names}}) where Names = Names
 
 ##################################################################################################################################
 # Main Material Stream API
 ##################################################################################################################################
 
-abstract type AbstractMaterialStream{S<:Species, T, N} end
+abstract type AbstractMaterialStream{S<:Labels, T, N} end
 
 components(stream::AbstractMaterialStream) = stream.comp
 
@@ -44,7 +44,7 @@ MoleStream{Components, T, N} <: AbstractMaterialStream{Components, T, N}
 
 Material stream where the components are moles
 """
-@kwdef struct MoleStream{S<:Species, T, N} <: AbstractMaterialStream{S, T, N}
+@kwdef struct MoleStream{S<:Labels, T, N} <: AbstractMaterialStream{S, T, N}
     comp  :: SVector{N,T}
     phase :: Symbol = :unknown
     id    :: Symbol = :nothing
@@ -62,7 +62,7 @@ MassStream{Components, T, N} <: AbstractMaterialStream{Components, T, N}
 
 Material stream where the components are mass
 """
-@kwdef struct MassStream{S<:Species, T, N} <: AbstractMaterialStream{S, T, N}
+@kwdef struct MassStream{S<:Labels, T, N} <: AbstractMaterialStream{S, T, N}
     comp  :: SVector{N,T}
     phase :: Symbol = :unknown
     id    :: Symbol = :nothing
