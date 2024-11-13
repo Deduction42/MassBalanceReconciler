@@ -23,7 +23,7 @@ species(::Type{Species{Names}}) where Names = Names
 # Main Material Stream API
 ##################################################################################################################################
 
-abstract type AbstractMaterialStream{Components<:Species, T, N} end
+abstract type AbstractMaterialStream{S<:Species, T, N} end
 
 components(stream::AbstractMaterialStream) = stream.comp
 
@@ -92,3 +92,12 @@ function MoleStream(stream::MassStream{S, T, N}, molwt::AbstractMaterialStream{S
         phase = stream.phase
     )
 end
+
+#=
+You may want to look into using "FieldVector" instead
+@kwdef struct TestSpecies{T} <: FieldVector{3,T}
+    a :: T
+    b :: T 
+    c :: T
+end
+=#
