@@ -1,0 +1,3 @@
+(0) Ignore "FieldArray", I don't think this does what I want it to
+(1) Consider a raw component vector that is one level below "MoleStream"
+    SpeciesVec{Species, V<:AbstractVector} (default is SVector{length(Species), T})
