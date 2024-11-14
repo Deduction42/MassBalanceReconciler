@@ -23,13 +23,19 @@ Species{L}(x::NamedTuple) where {L}     = Species{L}(SVector{length(L)}(values(x
 Species{L,T}(;kwargs...) where {L,T} = Species{L,T}(kwargs[L])
 Species{L}(;kwargs...) where {L}     = Species{L}(kwargs[L])
 
-
+Base.values(x::Species) = x.data
 Base.getindex(x::Species, i::Int) = x.data[i]
+
 function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
     nt = NamedTuple{L}(Base.OneTo(length(L)))
     return x.data[nt[i]]
 end
 
+function Base.get(x::Species{L,T,N}, i::Symbol, default) where {L,T,N}
+    nt = NamedTuple{L}(x.data.data)
+    return get(nt, i, default)
+end
 
-
-
+species(::Type{Species{L,T,N}}) where {L,T,N} = L
+species(x::Species) = species(typeof(x))
+Base.propertynames(x::Species) = species(x)
