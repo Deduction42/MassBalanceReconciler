@@ -1,8 +1,9 @@
 
-abstract type Measurement{T} end
+abstract type Measurement{S, T} end
 
-@kwdef struct VolumeFlowMeas{S, T, N} <: Measurement{T}
-    value    :: Float64
+
+@kwdef struct VolumeFlowMeas{S, T, N} <: Measurement{S, T}
+    value    :: T
     molarvol :: Species{S, Float64, N}
     flowind  :: Species{S, Int, N}
 end
@@ -13,6 +14,12 @@ function innovation(x::AbstractVector, m::VolumeFlowMeas)
     return m.value - dot(species(m.molarvol), species(stream))
 end
 
-function stateindex(m::VolumeFlowMeas)
-    return collect(m.flowind)
+stateindex(m::VolumeFlowMeas) = collect(m.flowind)
+
+
+@kwdef struct MassFlowMeas{S, T, N} <: Measurement{T}
+    value       :: T
+    molarmass   :: Species{S, Float64, N}
+    flowind     :: Species{S, Int, N}
 end
+MassFlowMeas{S, T}(x...) = MassFlowMeas{S, T, length(S)}(x...)
