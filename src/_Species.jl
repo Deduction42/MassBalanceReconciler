@@ -28,4 +28,4 @@ end
 
 species(::Type{Species{L,T,N}}) where {L,T,N} = L
 species(x::Type{Species{L,T,N}}) where {L,T,N} = L
-Base.propertynames(x::Type{Species{L,T,N}}) = L
+Base.propertynames(x::Type{Species{L,T,N}}) where {L,T,N} = L
