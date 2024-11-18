@@ -16,7 +16,7 @@
      -  Sparse gradients (to obtain observation matrix C) for each measurement
      -  Only update covariance along index
 
-(Ouside package, in parennt environment)
+(Move GhsSpecies object outside of the package, into parennt environment)
 (O1) Create specific Species types 
      -  GhGSpecies{T} = Species{(:CO2, :CH4, :N2O, :Other), T, 4}
      -  AnalyzerSpecies{T} = Species{(...), T, length(...)}
@@ -25,3 +25,6 @@
      -  gastuple = map(gas-> get(analyzerspecies, gas, zero(T)), gases)
      -  ghgtuple = (gastuple[begin:(end-1)]..., sum(analyzerspecies) - sum(gastuple[begin:(end-1)]))
      -  return GhGSpecies{T}(ghgtuple)
+(O3) Use these collapse methods to create methods to get attributes like
+     -  molar_volumes(GhgSpecies, model, streaminfo)
+     -  molar_weights(GhGSpecies, model, streaminfo)
