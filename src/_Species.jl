@@ -20,9 +20,11 @@ StaticArrays.construct_type(::Type{Species{L}}, x::AbstractArray{T}) where {L,T}
 StaticArrays.construct_type(::Type{Species{L}}, x::Tuple) where {L} = StaticArrays.construct_type(Species{L,Base.promote_typeof(x...),length(L)}, x)
 
 #Add support to NamedTuples and keyword arguments
+Species{L,T,N}(x::NamedTuple) where {L,T,N} = Species{L,T}(values(x[L]))
 Species{L,T}(x::NamedTuple) where {L,T} = Species{L,T}(values(x[L]))
 Species{L}(x::NamedTuple)  where {L}    = Species{L}(values(x[L]))
-Species{L,T}(;kwargs...)  where {L,T}   = Species{L,T,N}(kwargs[L])
+Species{L,T,N}(;kwargs...)  where {L,T,N}   = Species{L,T}(kwargs[L])
+Species{L,T}(;kwargs...)  where {L,T}   = Species{L,T}(kwargs[L])
 Species{L}(;kwargs...) where {L}        = Species{L}(kwargs[L])
 
 #Indexing functions
@@ -32,7 +34,14 @@ function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
     return x.data[nt[i]]
 end
 
+function Base.get(x::Species{L,T,N}, i::Symbol, d) where {L,T,N}
+    nt = NamedTuple{L}(x.data.data)
+    return get(nt, i, d)
+end
+Base.get(x::Species{L,T,N}, i::Nothing, d) where {L,T,N} = d
+
+
 #Introspection
-species(::Type{Species{L,T,N}}) where {L,T,N} = L
-species(x::Type{Species{L,T,N}}) where {L,T,N} = L
-Base.propertynames(x::Species{L,T,N}) where {L,T,N} = L
+species(::Type{<:Species{L}}) where L = L
+species(x::Species{L}) where L = L
+Base.propertynames(x::Species{L}) where L = L

@@ -1,4 +1,4 @@
-include("_ThermoModel.jl")
+include("_GhgSpecies.jl")
 
 @kwdef struct StreamInfo{L, T, N}
     id :: Symbol

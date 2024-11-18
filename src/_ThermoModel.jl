@@ -4,7 +4,7 @@ include("_Species.jl")
 
 import Clapeyron.molecular_weight
 
-const SPECIES_MAP = Dict{Symbol,String}(
+const CLAPEYRON_MAP = Dict{Symbol,String}(
     :methane => "methane",
     :ethane => "ethane",
     :propane => "propane",
@@ -43,7 +43,7 @@ end
 function ThermoModel(species::AbstractVector{Symbol})
     L = Tuple(species)
 
-    species_vec = [SPECIES_MAP[s] for s in species] 
+    species_vec = [CLAPEYRON_MAP[s] for s in species] 
     models = Species{L}(PR.(species_vec))
     mixed  = PR(species_vec)
 
@@ -68,7 +68,7 @@ end
 # Test code
 =======================================================================================#
 
-model = ThermoModel(collect(keys(SPECIES_MAP)))
+model = ThermoModel(collect(keys(CLAPEYRON_MAP)))
 L = species(model)
 z = Species{L}(rand(length(L)))
 molar_weights(model)
