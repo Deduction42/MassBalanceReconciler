@@ -1,15 +1,17 @@
-(1) Measurement Indexers start off with "String" parametric type (for looking up raw data tags)
+(1) Develop workflow for model construction
+     -  Prepare the global indexer ref to be used for all JSONs
+     -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
+     -  From JSON, Build Vector{AbstractMeas{L,String,N}} (value is the tag to pull from the tagdict)
+     -  From JSON, Build Vector{NodeInfo}{L,N} (no tags required, but reactions need to be parsed)
 
-(2) Instantiation comes with new data
-     -  Raw measurements
-     -  Local thermodynamic optimizations (i.e. specific volume)
-     -  Internal instantiated expressions 
-            stream = instantiate(streamind, x::AbstractVector)
-            err = y - f(stream)
-     -  Generate a vector of function wrappers for innovations (z(x) = y - f(x)) (including stdev)
-            This includes all of the balance innovations
+(2) Develop workflow for value population
+     -  Grab StreamInfo data from the tagdict and calculate the thermodynamic properties
+     -  Use thermodynamic properties to populate AbstractMeas{L,String,N}
+     -  Use tagdict to fill values of AbstractMeas{L,String,N}
 
-(3) Optimize over function wrappers divided by stdev
+(3) Optimize over negloglik() (standardized SSE)
+     -  Run the optimization algorithm over negloglik (on measurements and balances)
+     -  Use the Kalman update on innovtation
 
 (4) Use the sparse independent covariance update procedure
      -  Build an state index generator for every measurement type

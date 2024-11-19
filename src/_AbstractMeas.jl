@@ -1,6 +1,7 @@
 include("_StreamInfo.jl")
 
 abstract type AbstractMeas{S, T} end
+
 stateindex(m::AbstractMeas) = collect(m.flowind)
 standarderr(x::AbstractVector, m::AbstractMeas) = innovation(x,m)/m.stdev
 
