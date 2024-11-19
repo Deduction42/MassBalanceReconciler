@@ -33,6 +33,7 @@ function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
     nt = NamedTuple{L}(Base.OneTo(length(L)))
     return x.data[nt[i]]
 end
+Base.getindex(x::Species, i::Colon) = x.data
 
 function Base.get(x::Species{L,T,N}, i::Symbol, d) where {L,T,N}
     nt = NamedTuple{L}(x.data.data)
@@ -45,3 +46,8 @@ Base.get(x::Species{L,T,N}, i::Nothing, d) where {L,T,N} = d
 species(::Type{<:Species{L}}) where L = L
 species(x::Species{L}) where L = L
 Base.propertynames(x::Species{L}) where L = L
+
+#Populating object based on vector and indexer
+function populate(idx::Species{L,<:Integer}, x::AbstractVector{T}) where {L,T} 
+    return Species{L,T}(x[idx.data])
+end
