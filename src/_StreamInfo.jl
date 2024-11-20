@@ -14,8 +14,7 @@ StreamInfo{L,T}(;kwargs...) where {L,T} = StreamInfo{L, T, length(L)}(;kwargs...
 
 @kwdef struct ReactionInfo{L, N}
     id :: Symbol
-    stoich :: Species{L, Float64, N}
-    index  :: Int
+    index :: Reaction{L, Int, N}
 end
 
 function populate(rxn::ReactionInfo{L,N}, x::AbstractVector) where {L,N}
@@ -23,15 +22,15 @@ function populate(rxn::ReactionInfo{L,N}, x::AbstractVector) where {L,N}
     return Species{L, Float64, N}(rxnvec)
 end
 
-@kwdef struct NodeInfo{L, T, N}
+@kwdef struct BalanceInfo{L, T, N}
     id        :: Symbol
     inlets    :: Vector{StreamInfo{L, T, N}}
     outlets   :: Vector{StreamInfo{L, T, N}}
-    reactions :: Vector{ReactionInfo{L, T, N}}
+    reactions :: Vector{ReactionInfo{L, N}}
 end
 
-NodeInfo{L,T}(x...) where {L,T} = NodeInfo{L, T, length(L)}(x...)
-NodeInfo{L,T}(;kwargs...) where {L,T} = NodeInfo{L, T, length(L)}(;kwargs...)
+BalanceInfo{L,T}(x...) where {L,T} = BalanceInfo{L, T, length(L)}(x...)
+BalanceInfo{L,T}(;kwargs...) where {L,T} = BalanceInfo{L, T, length(L)}(;kwargs...)
 
 function molar_weights(model::ThermoModel{L}, stream::StreamInfo{L,<:Real}) where L
     return molar_weights(model)

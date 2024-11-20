@@ -49,5 +49,28 @@ Base.propertynames(x::Species{L}) where L = L
 
 #Populating object based on vector and indexer
 function populate(idx::Species{L,<:Integer}, x::AbstractVector{T}) where {L,T} 
-    return Species{L,T}(x[idx.data])
+    return Species{L,T}(populate_vec(idx, x))
+end
+
+function populate_vec(idx::Species{L,<:Integer}, x::AbstractVector{T}) where {L,T} 
+    return x[idx.data]
+end
+
+#=============================================================================
+Chemical reactions
+=============================================================================#
+struct Reaction{L,T,N}
+    extent = T
+    stoich = Species{L,T,N}
+end
+
+Reaction{L,T}(x...) where {L,T} = Reaction{L,T,length(L)}(x...)
+Reaction{L}(extent::T, stoich) where {L,T} = Reaction{L,T,length(L)}(extent, stoich)
+
+function populate(idx::Reaction{L,<:Integer}, x::AbstractVector{T}) where {L,T}
+    return Species{L}(populate_vec(idx, x))
+end
+
+function populate_vec(idx::Reaction{L,<:Integer}, x::AbstractVector{T}) where {L,T}
+    return x[idx.extent]*idx.stoich[:]
 end
