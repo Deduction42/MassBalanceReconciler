@@ -126,11 +126,13 @@ end
 MoleBalance{S, T}(x...) where {S,T} = MoleBalance{S, T, length(S)}(x...)
 
 function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Integer, N}) where {S,T,N}
-    balance = zero(SVector{N, promote_type(T,Float64)})
+    balinit = zero(SVector{N, promote_type(T,Float64)})
 
-    balance = sum(Base.Fix2(populate_vec, x), m.inlets, init=balance)
-    balance = sum(Base.Fix2(populate_vec, x), m.outlets, init=balance)
-    balance = sum(Base.Fix2(populate_vec, x), m.reactions, init=balance)
+    balance = (
+          sum(Base.Fix2(populate_vec, x), m.inlets, init=balinit)
+        - sum(Base.Fix2(populate_vec, x), m.outlets, init=balinit)
+        + sum(Base.Fix2(populate_vec, x), m.reactions, init=balinit)
+    )
 
     return balance
 end
