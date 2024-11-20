@@ -17,7 +17,7 @@ meastype(m::AbstractMeas) = meastype(typeof(m))
 
 changevalue(m::AbstractMeas, v) = @set m.value = v
 getvalue(d::Dict{T}, v::T) where T = d[v]
-getvalue(d::Dict{T}, v::AbstractVector{T}) where T  = map(k->d[k], v)
+getvalue(d::Dict{T}, v::AbstractVector{T}) where T  = map(Base.Fix1(get, d), v)
 getvalue(d::Dict{T}, v::Species{S,T}) where {S,T}   = Species{S}(getvalue(d, v[:]))
 
 readvalue(d::Dict{T}, m::AbstractMeas{S,T}) where {S,T} = changevalue(m, getvalue(d, m.value))
