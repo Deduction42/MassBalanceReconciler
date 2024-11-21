@@ -18,6 +18,13 @@
      -  Sparse gradients (to obtain observation matrix C) for each measurement
      -  Only update covariance along index
 
+(5) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
+     -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
+
+(6) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
+     -  Parent application can make any query they desire for this
+
+
 (Move GhsSpecies object outside of the package, into parennt environment)
 (O1) Create specific Species types 
      -  GhGSpecies{T} = Species{(:CO2, :CH4, :N2O, :Other), T, 4}
@@ -30,3 +37,23 @@
 (O3) Use these collapse methods to create methods to get attributes like
      -  molar_volumes(GhgSpecies, model, streaminfo)
      -  molar_weights(GhGSpecies, model, streaminfo)
+(O4) A mass balance system must have a single set of components, but multiple systems can be merged
+     -  Every "high-level system" contains the following elements:
+          -  nodes Dict{Symbol, NodeInfo}
+          -  streams Dict{Symbol, StreamInfo}
+          -  proportions Dict{Symbol, (:parent, :proportion, :timeconstant)}
+          -  measurements Dict{Symbol, NamedTuple{(:tags, :stream, :type)}}
+          -  TimeRecord{GaussianState}
+     -  This high level system in conjuction with "tagdict" is used to create a state space model with
+          -  GaussianState
+          -  predictor Tuple{A::Matrix{Float64}, Q::Matrix{Float64}}
+          -  measurements MeasCollection
+     -  Both models will have the merged node with the input and output streams
+          -  Input => MergedNode => Output 
+          -  The upstream model results provide a measurement to the downstream's "Input" stream
+          -  The downstream model results provde a measurement to the upstreams's "Output" stream
+     -  Only "intersecting" species can have non-zero values
+          -  Other speceis are the average between input and output
+     -  This will be useful for adding "combustion" units to the mass balance
+          -  These will have a large number of components which would cause adjacent systems to have very large states
+          -  This will also allow easy aggregation of streams to GhGSpecies
