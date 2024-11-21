@@ -1,8 +1,10 @@
-(1) Develop workflow for model construction
-     -  Prepare the global indexer ref to be used for all JSONs
-     -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
-     -  From JSON, Build Vector{AbstractMeas{L,String,N}} (value is the tag to pull from the tagdict)
-     -  From JSON, Build Vector{NodeInfo}{L,N} (no tags required, but reactions need to be parsed)
+Today (Nov 21)
+     (1) Work on state space model builder from "high-level system (MassBalanceSystem)"
+          - StreamInfo may need to be rewritten (could just be Species{L,Int} with an id and a phase)
+          - NodeInfo currently works
+          - MeasInfo needs to contain (id, streams, tags, type)
+     (2) Defining the MassBalanceSystem (particularly measurements) is the domain of the parent application
+
 
 (2) Develop workflow for value population
      -  Grab StreamInfo data from the tagdict and calculate the thermodynamic properties
@@ -26,6 +28,11 @@
 
 
 (Move GhsSpecies object outside of the package, into parennt environment)
+(1) Develop workflow for model construction
+     -  Prepare the global indexer ref to be used for all JSONs
+     -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
+     -  From JSON, Build Vector{AbstractMeas{L,String,N}} (value is the tag to pull from the tagdict)
+     -  From JSON, Build Vector{NodeInfo}{L,N} (no tags required, but reactions need to be parsed)
 (O1) Create specific Species types 
      -  GhGSpecies{T} = Species{(:CO2, :CH4, :N2O, :Other), T, 4}
      -  AnalyzerSpecies{T} = Species{(...), T, length(...)}
