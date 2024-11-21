@@ -118,6 +118,7 @@ Mole Balancer
 =============================================================================#
 @kwdef struct MoleBalance{S, T, N} <: AbstractMeas{S, T}
     value     :: Species{S, T, N}
+    interval  :: Float64
     inlets    :: Vector{Species{S, Int, N}}
     outlets   :: Vector{Species{S, Int, N}}
     reactions :: Vector{Reaction{S, Int, N}}
@@ -134,7 +135,7 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Integer, N}) where
         + sum(Base.Fix2(populate_vec, x), m.reactions, init=balinit)
     )
 
-    return balance
+    return balance.*m.interval
 end
 
 #=============================================================================
