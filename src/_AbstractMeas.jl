@@ -94,7 +94,7 @@ function build(::Type{<:VolumeFlowMeas}, measid::Symbol, plant::PlantInfo{S}, th
         value    = measinfo.tags[1],
         stdev    = measinfo.stdev,
         flowind  = plant.streams[measinfo.stream],
-        molarvol = Species{S,Float64}(molar_volumes(thermo[measid]))
+        molarvol = molar_volumes(thermo[measid])
     )
 end
 
@@ -127,7 +127,7 @@ function build(::Type{<:MassFlowMeas}, measid::Symbol, plant::PlantInfo{S}, ther
         value    = measinfo.tags[1],
         stdev    = measinfo.stdev,
         flowind  = plant.streams[measinfo.stream],
-        molarvol = Species{S,Float64}(molar_weights(thermo[measid]))
+        molarvol = molar_weights(thermo[measid])
     )
 end
 
@@ -191,7 +191,7 @@ end
 
 function build(::Type{<:MoleBalance}; nodeid::Symbol, plant::PlantInfo{S}) where S
     nodeinfo = plant.nodes[nodeid]
-    
+
     return MoleBalance{S, Float64}(
         id        = nodeid,
         value     = Species{S}(zero(SVector{lenth(S), Float64})),

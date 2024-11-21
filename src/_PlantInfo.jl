@@ -72,9 +72,9 @@ end
 Construction info for measurements
 =============================================================================#
 @kwdef struct MeasInfo
-    id     :: Symbol,
-    type   :: UnionAll,
-    tags   :: Vector{String},
+    id     :: Symbol
+    type   :: UnionAll
+    tags   :: Vector{String}
     stdev  :: Vector{Float64}
     stream :: Symbol = Symbol("")
     node   :: Symbol = Symbol("")
@@ -105,5 +105,3 @@ function stateindex!(plantinfo::PlantInfo)
 
     return indref[]
 end
-
-

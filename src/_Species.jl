@@ -60,8 +60,8 @@ end
 Chemical reactions
 =============================================================================#
 struct Reaction{L,T,N}
-    extent = T
-    stoich = Species{L,T,N}
+    extent :: T
+    stoich :: Species{L,T,N}
 end
 
 Reaction{L,T}(x...) where {L,T} = Reaction{L,T,length(L)}(x...)

@@ -23,7 +23,7 @@ species(x::AbstractThermo{L}) where L = L
     ThermoModel{L}(x...) where L = new{L, length(L)}(x...)
 end
 
-function ThermoModel{L}(thermomap::Dict{Symbol,String})
+function ThermoModel{L}(thermomap::Dict{Symbol,String}) where {L}
     species_vec = [thermomap[s] for s in L] 
     models = Species{L}(PR.(species_vec))
     mixed  = PR(species_vec)
@@ -37,13 +37,16 @@ end
 #=======================================================================================
 # Thermodynamic states
 =======================================================================================#
-@kwdef struct ThermoState{L,T,N} <: AbstractThermo{L}
+@kwdef struct ThermoState{L,E,N} <: AbstractThermo{L}
     model :: ThermoModel{L,N}
-    T :: T
-    P :: T 
-    n :: Species{L,T,N}
+    T :: E
+    P :: E 
+    n :: Species{L,E,N}
     phase :: Symbol = :unknown
 end
+
+ThermoState{L,T}(x...) where {L,T} = ThermoState{L,T,length(L)}(x...)
+ThermoState{L,T}(;kwargs...) where {L,T} = ThermoState{L,T,length(L)}(kwargs[fieldnames(ThermoState)]...)
 
 molar_weights(model::ThermoModel{L}) where L = Species{L}(molecular_weight.(model.pure))
 molar_weights(state::ThermoState) = molar_weights(state.model)
@@ -62,7 +65,8 @@ end
 #=======================================================================================
 # Test code
 =======================================================================================#
-const CLAPEYRON_MAP = Dict{Symbol,String}(
+#=
+clapmap = Dict{Symbol,String}(
     :methane => "methane",
     :ethane => "ethane",
     :propane => "propane",
@@ -86,11 +90,11 @@ const CLAPEYRON_MAP = Dict{Symbol,String}(
     :argon => "argon"
 )
 
-L = Tuple(collect(keys(CLAPEYRON_MAP)))
-model = ThermoModel{L}(CLAPEYRON_MAP)
-z = Species{L}(rand(length(L)))
+L = Tuple(collect(keys(clapmap)))
+model = ThermoModel{L}(clapmap)
+state = ThermoState{L,Float64}(model=model, T=273.15, P=101.3, n=Species{L}(rand(length(L))), phase=:gas)
+
 molar_weights(model)
-molar_volumes(model, 273.15+30, 101.3*1000, z, phase=:gas)
-
-
+molar_volumes(state)
+=#
 
