@@ -1,6 +1,11 @@
-Today (Nov 21)
-     (1) Don't parameterize values on tags, add a tags field separate from values
-     (2) Initialize the tags with zeros, and mutate them on read (because we may need to store previous values)
+Today
+     (1)  Build separte "ThermoInfo" object that has tags and values
+          tags   :: Dict{Symbol, ThermoState{L, String}}
+          values :: Dict{Symbol, ThermoState{L, Float64}}
+     (2)  Create the functionality to read tags into the ThermoInfo values
+     (3)  Create the functionality to read ThermoInfo into VolumeFlowMeas and MassFlowMeas 
+          MassFlowMeas only needs to be read once
+          ThermoInfo should contain VolumeFlowMeas tags when running
 
 
 (3) Optimize over negloglik() (standardized SSE)

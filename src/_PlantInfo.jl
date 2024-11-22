@@ -19,13 +19,15 @@ Construction info for streams
 @kwdef struct StreamInfo{L, N}
     id :: Symbol
     index :: Species{L, Int, N}
+    massflow :: Float64
     phase :: Symbol = :unknown
 end
 
-function StreamInfo{L}(;id, phase=unknown) where L
+function StreamInfo{L}(;id, massflow, phase=unknown) where L
     return StreamInfo{L,N}(
         id = id,
         index = Species{L, Int, N}(zero(SVector{N,Int})),
+        massflow = massflow,
         phase = phase
     )
 end
@@ -81,12 +83,23 @@ Construction info for measurements
 end
 
 #=============================================================================
+Construction info for simple stream relationshps
+=============================================================================#
+@kwdef struct StreamRelationship
+    id     :: Symbol
+    parent :: Symbol
+    factor :: Float64
+    timeconst :: Float64
+end
+
+#=============================================================================
 Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo{L,N}
-    streams :: Dict{Symbol, StreamInfo{L,N}} = Dict{Symbol, StreamInfo{L,N}}()
-    nodes   :: Dict{Symbol, NodeInfo{L,N}}   = Dict{Symbol, NodeInfo{L,N}}()
-    measurements :: Dict{Symbol, MeasInfo}   = Dict{Symbol, NodeInfo{L,N}}()
+    streams :: Vector{StreamInfo{L,N}} = StreamInfo{L,N}[]
+    nodes   :: Vector{NodeInfo{L,N}}   = NodeInfo{L,N}[]
+    measurements  :: Vector{MeasInfo}  = MeasInfo[]
+    relationships :: Vector{StreamRelationship} = StreamRelationship[]
 end
 
 PlantInfo{L}(;kwargs...) where {L} = PlantInfo{L, length(L)}(;kwargs...)
@@ -95,11 +108,11 @@ PlantInfo{L}(;kwargs...) where {L} = PlantInfo{L, length(L)}(;kwargs...)
 function stateindex!(plantinfo::PlantInfo)
     indref = Ref(0)
 
-    for k in sort!(collect(keys(plantinfo.streams)))
+    for k in eachindex(plantinfo.streams)
         plantinfo.streams[k] = stateindex!(indref, plantinfo.streams[k])
     end
 
-    for k in sort!(collect(keys(plantinfo.nodes)))
+    for k in eachindex(plantinfo.nodes)
         plantinfo.nodes[k] = stateindex!(indref, plantinfo.nodes[k])
     end
 
