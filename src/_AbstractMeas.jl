@@ -10,7 +10,7 @@ abstract type AbstractMeas{S, T} end
 eltype(::Type{<:AbstractMeas{S,T}}) where {S,T} = T
 
 stateindex(m::AbstractMeas) = collect(m.stream)
-stateindex(v::AbstractVector{<:Stream})   = reduce(vcat, v)
+stateindex(v::AbstractVector{<:Species})  = reduce(vcat, v)
 stateindex(v::AbstractVector{<:Reaction}) = getextent.(v)
 standarderr(x::AbstractVector, m::AbstractMeas) = innovation(x,m)/m.stdev
 
