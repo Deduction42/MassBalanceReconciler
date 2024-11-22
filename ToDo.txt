@@ -1,15 +1,7 @@
 Today (Nov 21)
-     (1) Work on state space model builder from "high-level system (MassBalanceSystem)"
-          - StreamInfo may need to be rewritten (could just be Species{L,Int} with an id and a phase)
-          - NodeInfo currently works
-          - MeasInfo needs to contain (id, streams, tags, type)
-     (2) Defining the MassBalanceSystem (particularly measurements) is the domain of the parent application
+     (1) Don't parameterize values on tags, add a tags field separate from values
+     (2) Initialize the tags with zeros, and mutate them on read (because we may need to store previous values)
 
-
-(2) Develop workflow for value population
-     -  Grab StreamInfo data from the tagdict and calculate the thermodynamic properties
-     -  Use thermodynamic properties to populate AbstractMeas{L,String,N}
-     -  Use tagdict to fill values of AbstractMeas{L,String,N}
 
 (3) Optimize over negloglik() (standardized SSE)
      -  Run the optimization algorithm over negloglik (on measurements and balances)

@@ -28,6 +28,7 @@ Species{L,T}(;kwargs...)  where {L,T}   = Species{L,T}(kwargs[L])
 Species{L}(;kwargs...) where {L}        = Species{L}(kwargs[L])
 
 #Indexing functions
+getdata(x::Species) = x.data
 Base.getindex(x::Species, i::Int) = x.data[i]
 function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
     nt = NamedTuple{L}(Base.OneTo(length(L)))
@@ -63,6 +64,8 @@ struct Reaction{L,T,N}
     extent :: T
     stoich :: Species{L,T,N}
 end
+getextent(r::Reaction) = r.extent
+getstoich(r::Reaction) = r.stoich
 
 Reaction{L,T}(x...) where {L,T} = Reaction{L,T,length(L)}(x...)
 Reaction{L}(extent::T, stoich) where {L,T} = Reaction{L,T,length(L)}(extent, stoich)
