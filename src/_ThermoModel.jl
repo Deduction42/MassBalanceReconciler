@@ -37,11 +37,11 @@ end
 #=======================================================================================
 # Thermodynamic states
 =======================================================================================#
-@kwdef struct ThermoState{L,E,N} <: AbstractThermo{L}
+@kwdef struct ThermoState{L,ET,N} <: AbstractThermo{L}
     model :: ThermoModel{L,N}
-    T :: E
-    P :: E 
-    n :: Species{L,E,N}
+    T :: ET
+    P :: ET 
+    n :: Species{L,ET,N}
     phase :: Symbol = :unknown
 end
 
@@ -59,6 +59,16 @@ function molar_volumes(state::ThermoState{L}) where L
     return Species{L}(purevol.*(mixedvol/sum(purevol.*x)))
 end
 
+function readvalues(d::Dict{<:Any,<:ET}, obj::ThermoState{L}) where {L,ET}
+    getter = Base.Fix1(get,d)
+    return ThermoState{L,ET}(
+        model = obj.model,
+        T = getter(obj.T),
+        P = getter(obj.P),
+        n = Species{L,ET}(getter.(obj.n[:])),
+        phase = obj.phase
+    )
+end
 
 
 

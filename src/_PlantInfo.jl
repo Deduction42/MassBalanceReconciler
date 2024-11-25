@@ -118,3 +118,19 @@ function stateindex!(plantinfo::PlantInfo)
 
     return indref[]
 end
+
+#=============================================================================
+Thermodynamic information (separated from plant to enable abstraction of composition)
+=============================================================================#
+@kwdef struct ThermoInfo{L,N}
+    tags   :: Dict{Symbol, ThermoState{L,String,N}}
+    values :: Dict{Symbol, ThermoState{L,Float64,N}}
+end
+
+function readvalues!(d::Dict, obj::ThermoInfo)
+    for (k, tags) in obj.tags
+        obj.values[k] = readvalues(d, tags)
+    end
+    return obj
+end
+
