@@ -12,6 +12,7 @@ struct Species{L,T,N} <: StaticVector{N,T}
         return new{L, T, length(L)}(SVector{length(L),T}(x))
     end
 end
+speciesvec(x::Species) = x.data
 
 #Extend key StaticArray interface functions
 StaticArrays.length(::Type{<:Species{L}}) where L = length(L)
@@ -28,7 +29,6 @@ Species{L,T}(;kwargs...)  where {L,T}   = Species{L,T}(kwargs[L])
 Species{L}(;kwargs...) where {L}        = Species{L}(kwargs[L])
 
 #Indexing functions
-getdata(x::Species) = x.data
 Base.getindex(x::Species, i::Int) = x.data[i]
 function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
     nt = NamedTuple{L}(Base.OneTo(length(L)))
@@ -48,14 +48,6 @@ species(::Type{<:Species{L}}) where L = L
 species(x::Species{L}) where L = L
 Base.propertynames(x::Species{L}) where L = L
 
-#Populating object based on vector and indexer
-function populate(idx::Species{L,<:Integer}, x::AbstractVector{T}) where {L,T} 
-    return Species{L,T}(populate_vec(idx, x))
-end
-
-function populate_vec(idx::Species{L,<:Integer}, x::AbstractVector{T}) where {L,T} 
-    return x[idx.data]
-end
 
 #=============================================================================
 Chemical reactions
@@ -64,16 +56,51 @@ struct Reaction{L,T,N}
     extent :: T
     stoich :: Species{L,T,N}
 end
-getextent(r::Reaction) = r.extent
-getstoich(r::Reaction) = r.stoich
+speciesvec(r::Reaction) = r.extent .* r.stoich[:]
 
 Reaction{L,T}(x...) where {L,T} = Reaction{L,T,length(L)}(x...)
 Reaction{L}(extent::T, stoich) where {L,T} = Reaction{L,T,length(L)}(extent, stoich)
 
-function populate(idx::Reaction{L,<:Integer}, x::AbstractVector{T}) where {L,T}
-    return Species{L}(populate_vec(idx, x))
+
+#=============================================================================
+Interactions with state vectors
+=============================================================================#
+function Base.getindex(x::AbstractVector{T}, idx::Species{L,<:Integer}) where {L,T}
+    return Species{L}(x[idx.data])
 end
 
-function populate_vec(idx::Reaction{L,<:Integer}, x::AbstractVector{T}) where {L,T}
-    return x[idx.extent]*idx.stoich[:]
+function Base.setindex!(x::AbstractVector{T}, idx::Species{L,<:Integer}, vals::Species{L}) where {L,T}
+    x[idx.data] = vals.data
+    return x 
 end
+
+function Base.getindex(x::AbstractVector{T}, idx::Reaction{L,<:Integer}) where {L,T}
+    return Reaction{L}(x[idx.extent], idx.stoich)
+end
+
+function Base.setindex!(x, idx::Reaction{L,<:Integer}, val::Reaction{L})
+    x[idx.extent] = val.extent
+    return x
+end
+
+speciesvec(x::AbstractVector, idx::Species)  = x[idx.data]
+speciesvec(x::AbstractVector, idx::Reaction) = x[idx.extent] .* idx.stoich.data
+
+#=============================================================================
+Stoichometric relationships between Species vectors and reaction coefficients
+=============================================================================#
+
+#Find the extend of reaction based on each reaction coefficient
+#It is based on which species are consumed (negative values means species is consumed)
+#Species that are not consumed have an infinite extent (they don't limit the extent of reaction)
+function stoich_extent(rxn_coeff::T1, input::T2) where {T1<:Real,T2<:Real} 
+    T = promote_type(T1,T2,Float64)
+    return ifelse(rxn_coeff<0, input/abs(rxn_coeff), T(Inf))
+end
+
+"""
+stoich_extent(reaction::AbstractVector, input::AbstractVector)
+
+Finds maximum reaction extent based on stoichiometry and the limiting reagent
+"""
+stoich_extent(reaction::AbstractVector, input::AbstractVector) = mapreduce(stoich_extent, min, reaction, input)

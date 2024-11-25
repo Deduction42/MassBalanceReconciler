@@ -83,7 +83,7 @@ end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
 
 function prediction(x::AbstractVector, m::VolumeFlowMeas)
-    stream = populate_vec(m.stream, x)
+    stream = x[m.stream[:]]
     return dot(m.molarvol[:], stream)
 end
 
@@ -118,7 +118,7 @@ end
 MassFlowMeas{S, T}(x...) where {S,T}  = MassFlowMeas{S, T, length(S)}(x...)
 
 function prediction(x::AbstractVector, m::MassFlowMeas)
-    stream = populate_vec(m.stream, x)
+    stream = x[m.stream[:]]
     return dot(m.molarmass[:], stream)
 end
 
@@ -152,7 +152,7 @@ end
 MoleAnalyzer{S, T}(x...) where {S,T} = MoleAnalyzer{S, T, length(S)}(x...)
 
 function prediction(x::AbstractVector, m::MoleAnalyzer)
-    stream = populate_vec(m.stream, x)
+    stream = x[m.stream[:]]
     return stream./sum(stream)
 end
 
@@ -200,9 +200,9 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Integer, N}) where
     balinit = zero(SVector{N, promote_type(T,Float64)})
 
     balance = (
-          sum(Base.Fix2(populate_vec, x), m.inlets, init=balinit)
-        - sum(Base.Fix2(populate_vec, x), m.outlets, init=balinit)
-        + sum(Base.Fix2(populate_vec, x), m.reactions, init=balinit)
+          sum(Base.Fix1(speciesvec, x), m.inlets, init=balinit)
+        - sum(Base.Fix1(speciesvec, x), m.outlets, init=balinit)
+        + sum(Base.Fix1(speciesvec, x), m.reactions, init=balinit)
     )
 
     return balance.*m.interval

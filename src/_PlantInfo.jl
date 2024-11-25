@@ -23,7 +23,7 @@ Construction info for streams
     phase :: Symbol = :unknown
 end
 
-function StreamInfo{L}(;id, massflow, phase=unknown) where L
+function StreamInfo{L}(;id, massflow, phase=:unknown) where L
     return StreamInfo{L,N}(
         id = id,
         index = Species{L, Int, N}(zero(SVector{N,Int})),
