@@ -78,7 +78,7 @@ function Base.getindex(x::AbstractVector{T}, idx::Reaction{L,<:Integer}) where {
     return Reaction{L}(x[idx.extent], idx.stoich)
 end
 
-function Base.setindex!(x, idx::Reaction{L,<:Integer}, val::Reaction{L})
+function Base.setindex!(x::AbstractVector{T}, idx::Reaction{L,<:Integer}, val::Reaction{L}) where {L,T}
     x[idx.extent] = val.extent
     return x
 end
