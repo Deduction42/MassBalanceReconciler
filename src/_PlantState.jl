@@ -69,10 +69,28 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
 
 
     #Build the measurements based off the thermodynamic information
+    meascollection = MeasCollection{S,Float32}()
+
+    for measinfo in plant.measurements
+        type = measinfo.type
+        push!(meascollection[type], build(type, measinfo, stream_dict, thermo))
+    end
+
+    for nodeinfo in plant.nodes
+        push!(meascollection[MoleBalance], build(MoleBalance, nodeinfo, stream_dict))
+    end
+
 
     #Populate the final object with constructed values and pass through the stream and node information
-
-
+    return PlantState{Lc,Nc}(
+        timestamp = Ref(0.0),
+        statevec = statevec,
+        statecov = statecov,
+        dpredictor = dpredictor,
+        measurements = meascollection,
+        streams = plantinfo.streams,
+        nodes = plantinfo.nodes
+    )
 end
 
 

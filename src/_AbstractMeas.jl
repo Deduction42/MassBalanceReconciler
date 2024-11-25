@@ -87,20 +87,18 @@ function prediction(x::AbstractVector, m::VolumeFlowMeas)
     return dot(m.molarvol[:], stream)
 end
 
-function build(::Type{<:VolumeFlowMeas}, measid::Symbol, plant::PlantInfo{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    measinfo = plant.measurements[measid]
-
+function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol, <:ThermoState}) where S
     if length(measinfo.tags) != 1
-        error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measid)' contains $(length(measinfo.tags))")
+        error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
 
     return VolumeFlowMeas{S, Float64}(
-        id       = measid,
+        id       = measinfo.id,
         tag      = measinfo.tags[1],
         value    = 0.0,
         stdev    = measinfo.stdev,
-        stream   = plant.streams[measinfo.stream],
-        molarvol = molar_volumes(thermo[measid])
+        stream   = streams[measinfo.stream].index,
+        molarvol = molar_volumes(thermo[measinfo.stream])
     )
 end
 
@@ -122,20 +120,18 @@ function prediction(x::AbstractVector, m::MassFlowMeas)
     return dot(m.molarmass[:], stream)
 end
 
-function build(::Type{<:MassFlowMeas}, measid::Symbol, plant::PlantInfo{S}, thermo::Dict{Symbol,<:ThermoState}) where S
-    measinfo = plant.measurements[measid]
-
+function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
     if length(measinfo.tags) != 1
-        error("Measurement Type: MassFlowMeas only supports 1 tag, measurement id '$(measid)' contains $(length(measinfo.tags))")
+        error("Measurement Type: MassFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
     
     return MassFlowMeas{S, Float64}(
-        id        = measid,
+        id        = measinfo.id,
         tag       = measinfo.tags[1],
         value     = 0.0,
         stdev     = measinfo.stdev,
-        stream    = plant.streams[measinfo.stream],
-        molarmass = molar_weights(thermo[measid])
+        stream    = streams[measinfo.stream].index,
+        molarmass = molar_weights(thermo[measinfo.stream])
     )
 end
 
@@ -156,8 +152,8 @@ function prediction(x::AbstractVector, m::MoleAnalyzer)
     return stream./sum(stream)
 end
 
-function build(::Type{<:MoleAnalyzer}, measid::Symbol, plant::PlantInfo{S}) where S
-    measinfo = plant.measurements[measid]
+function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
+    measid = measinfo.id
     N = length(S)
 
     if length(measinfo.tags) != N
@@ -169,7 +165,7 @@ function build(::Type{<:MoleAnalyzer}, measid::Symbol, plant::PlantInfo{S}) wher
         tag      = Species{S,String}(measinfo.tags),
         value    = zero(Species{S,Float64,N}),
         stdev    = measinfo.stdev,
-        stream   = plant.streams[measinfo.stream]
+        stream   = streams[measinfo.stream]
     )
 end
 
@@ -208,16 +204,16 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Integer, N}) where
     return balance.*m.interval
 end
 
-function build(::Type{<:MoleBalance}; nodeid::Symbol, plant::PlantInfo{S}) where S
-    nodeinfo = plant.nodes[nodeid]
+function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamInfo{S}}) where S
+    nodeid = nodeinfo.id
     N = length(S)
 
     return MoleBalance{S, Float64}(
         id        = nodeid,
         value     = zero(Species{S, Float64, N}),
         stdev     = Species{S}(nodeinfo.stdev),
-        inlets    = [plantinfo.streams[id] for id in nodeinfo.inlets],
-        outlets   = [plantinfo.streams[id] for id in nodeinfo.outlets],
+        inlets    = [streams[id] for id in nodeinfo.inlets],
+        outlets   = [streams[id] for id in nodeinfo.outlets],
         reactions = nodeinfo.reactions
     )
 end
@@ -231,6 +227,7 @@ Collection of all measurements
     MoleAnalyzer    :: Vector{MoleAnalyzer{S,T,N}}   = MoleAnalyzer{S,T,N}[]
     MoleBalance     :: Vector{MoleBalance{S,T,N}}    = MoleBalance{S,T,N}[]
 end
+MeasCollection{S,T}(;kwargs...) where {S,T}= MeasCollection{S,T,length(S)}(kwargs...)
 
 Base.getindex(m::MeasCollection, k::Symbol)  = getproperty(m, k)
 Base.getindex(m::MeasCollection, k::Integer) = getproperty(m, fieldnames(MeasCollection)[k])
