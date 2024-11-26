@@ -81,7 +81,7 @@ measinfo = [
     MeasInfo(
         id    = :s1_analyzer,
         type  = MoleAnalyzer,
-        tags  = ["AI-101-CO2","AI-102-CH4","AI-103-NO2","AI-104-Other"],
+        tags  = ["AI-101-CO2","AI-101-CH4","AI-101-NO2","AI-101-Other"],
         stdev = [0.01, 0.01, 0.01, 0.01],
         stream = :s1
     )
@@ -122,11 +122,20 @@ MassBalanceReconciler.Species{GHG,T}(mixture::Species{ANALYZER_SPECIES}) where T
 
 moledict = Dict(label2symbol.(jsonobj.components) .=> jsonobj.mole_percents)
 molepercents = Species{ANALYZER_SPECIES}([moledict[k] for k in ANALYZER_SPECIES])
+moletags = Species{ANALYZER_SPECIES}("AI-101 ".*jsonobj.components)
 
 thermomodel = ThermoModel{ANALYZER_SPECIES}(clapmap)
 thermostate = ThermoState{ANALYZER_SPECIES, Float64}(model=thermomodel, T=273+30, P=101.3, n=molepercents./sum(molepercents), phase=:gas)
+thermotags  = ThermoState{ANALYZER_SPECIES, String}(model=thermomodel, T="TI-101", P="PI-101", n=moletags, phase=:gas)
 
-thermodict = Dict(:s1=>thermostate, :s2=>thermostate, :s3=>thermostate)
+
+thermoinfo = ThermoInfo{ANALYZER_SPECIES}(
+    tags   = Dict(:s1=>thermotags, :s2=>thermotags, :s3=>thermotags),
+    values = Dict(:s1=>thermostate, :s2=>thermostate, :s3=>thermostate)
+)
+
+
+
 
 #=
 #Test conversion/aggregation
@@ -134,4 +143,4 @@ mixture = Species{ANALYZER_SPECIES}(rand(length(ANALYZER_SPECIES)))
 ghgs = GhgSpecies(mixture)
 =#
 
-plantstate = PlantState(plantinfo, thermodict)
+plantstate = PlantState(plantinfo, thermoinfo.values)

@@ -127,6 +127,8 @@ Thermodynamic information (separated from plant to enable abstraction of composi
     tags   :: Dict{Symbol, ThermoState{L,String,N}}
     values :: Dict{Symbol, ThermoState{L,Float64,N}}
 end
+ThermoInfo{L}(x...) where L = ThermoInfo{L,length(L)}(x...)
+ThermoInfo{L}(;kw...) where L = ThermoInfo{L,length(L)}(;kw...)
 
 function readvalues!(d::Dict, obj::ThermoInfo)
     for (k, tags) in obj.tags
