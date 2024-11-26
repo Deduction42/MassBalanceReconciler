@@ -96,6 +96,24 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
     )
 end
 
+function readvalues!(plant::PlantState, d::AbstractDict)
+    readvalues!(plant.measurements, d)
+    return plant
+end
+
+#=============================================================================
+Populate the tag dictionary with translated anlyzer values
+=============================================================================#
+function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
+    for meas in measurements.MoleAnalyzer
+        molefracs  = Species{L}(thermo[meas.streamid].n)[:]
+        molefracs  = molefracs./sum(molefracs)
+
+        for ii in eachindex(molefracs)
+            tagdict[meas.tag[ii]] = molefracs[ii]
+        end
+    end
+end
 
 #Build the readvalues function for PlantInfo, and ThermoInfo (needed for volume flows)
 

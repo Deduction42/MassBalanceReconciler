@@ -21,10 +21,10 @@ setvalue(m::AbstractMeas, v) = @set m.value = v
 getvalue(m::AbstractMeas) = m.value
 
 getvalue(d::Dict, v) = d[v]
-getvalue(d::Dict, v::AbstractVector) = map(Base.Fix1(get, d), v)
+getvalue(d::Dict, v::AbstractVector) = map(Base.Fix1(getindex, d), v)
 getvalue(d::Dict, v::Species{S}) where S = Species{S}(getvalue(d, v[:]))
 
-readvalue(m::AbstractMeas{S,T}, d::Dict{T}) where {S,T} = setvalue(m, getvalue(d, m.tag))
+readvalue(m::AbstractMeas{S,T}, d::Dict) where {S,T} = setvalue(m, getvalue(d, m.tag))
 
 function negloglik(x::AbstractVector{T}, m::AbstractVector{<:AbstractMeas}) where T <: Real
     return sum(Base.Fix1(negloglik, x), m, init=zero(promotetype(T,Float64)))
@@ -74,6 +74,7 @@ Volumetric flow rates
 =============================================================================#
 @kwdef struct VolumeFlowMeas{S, T, N} <: AbstractSingleMeas{S, T}
     id       :: Symbol
+    streamid :: Symbol
     tag      :: String
     value    :: T
     molarvol :: Species{S, Float64, N}
@@ -95,6 +96,7 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
 
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
+        streamid = measinfo.stream,
         tag      = measinfo.tags[1],
         value    = 0.0,
         stdev    = measinfo.stdev[1],
@@ -108,6 +110,7 @@ Mass flow rates
 =============================================================================#
 @kwdef struct MassFlowMeas{S, T, N} <: AbstractSingleMeas{S, T}
     id          :: Symbol
+    streamid    :: Symbol
     tag         :: String
     value       :: T
     molarmass   :: Species{S, Float64, N}
@@ -129,6 +132,7 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
     
     return MassFlowMeas{S, Float64}(
         id        = measinfo.id,
+        streamid  = measinfo.stream,
         tag       = measinfo.tags[1],
         value     = 0.0,
         stdev     = measinfo.stdev[1],
@@ -141,11 +145,12 @@ end
 Molar Analysis
 =============================================================================#
 @kwdef struct MoleAnalyzer{S, T, N} <: AbstractMultiMeas{S, T}
-    id      :: Symbol
-    tag     :: Species{S, String, N}
-    value   :: Species{S, T, N}
-    stream  :: Species{S, Int, N}
-    stdev   :: Species{S, Float64, N}
+    id       :: Symbol
+    streamid :: Symbol
+    tag      :: Species{S, String, N}
+    value    :: Species{S, T, N}
+    stream   :: Species{S, Int, N}
+    stdev    :: Species{S, Float64, N}
 end
 MoleAnalyzer{S, T}(x...) where {S,T} = MoleAnalyzer{S, T, length(S)}(x...)
 MoleAnalyzer{S, T}(;kw...) where {S,T} = MoleAnalyzer{S, T, length(S)}(;kw...)
@@ -165,6 +170,7 @@ function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol,
 
     return MoleAnalyzer{S, Float64}(
         id       = measid,
+        streamid = measinfo.stream,
         tag      = Species{S,String}(measinfo.tags),
         value    = zero(Species{S,Float64,N}),
         stdev    = Species{S,Float64,N}(measinfo.stdev),
@@ -243,13 +249,13 @@ Base.getindex(m::MeasCollection, ::Type{T}) where T = getproperty(m, Symbol(T))
 Base.getindex(m::MeasCollection, k::AbstractVector) = map(Base.Fix1(getindex, m), k)
 Base.getindex(m::MeasCollection, k::Tuple) = map(Base.Fix1(getindex, m), k)
 
-function readvalues!(v::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}
+function readvalues!(vmeas::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}
     if hasfield(M, :tag)
-        for (ii, m) in enumerate(measurements)
-            v[ii] = readvalue(m, d)
+        for (ii, m) in enumerate(vmeas)
+            vmeas[ii] = readvalue(m, d)
         end
     end
-    return v
+    return vmeas
 end
 
 function readvalues!(c::MeasCollection, d::Dict)
@@ -257,3 +263,6 @@ function readvalues!(c::MeasCollection, d::Dict)
         readvalues!(c[fn], d)
     end
 end
+
+
+

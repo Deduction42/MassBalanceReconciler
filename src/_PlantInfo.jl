@@ -130,7 +130,7 @@ end
 ThermoInfo{L}(x...) where L = ThermoInfo{L,length(L)}(x...)
 ThermoInfo{L}(;kw...) where L = ThermoInfo{L,length(L)}(;kw...)
 
-function readvalues!(d::Dict, obj::ThermoInfo)
+function readvalues!(obj::ThermoInfo, d::Dict)
     for (k, tags) in obj.tags
         obj.values[k] = readvalues(d, tags)
     end

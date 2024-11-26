@@ -56,7 +56,7 @@ function molar_volumes(state::ThermoState{L}) where L
 end
 
 function readvalues(d::Dict{<:Any,<:ET}, obj::ThermoState{L}) where {L,ET}
-    getter = Base.Fix1(get,d)
+    getter = Base.Fix1(getindex,d)
     return ThermoState{L,ET}(
         model = obj.model,
         T = getter(obj.T),

@@ -144,3 +144,21 @@ ghgs = GhgSpecies(mixture)
 =#
 
 plantstate = PlantState(plantinfo, thermoinfo.values)
+
+
+
+tagdict = Dict{String,Float64}()
+tagdict["TI-101"] = 273.15+35
+tagdict["PI-101"] = 104.3
+tagdict["FI-101"] = 30.0
+tagdict["FI-102"] = 13.0
+
+fracs = rand(length(ANALYZER_SPECIES))
+fracs = fracs./sum(fracs)
+for (ii, k) in enumerate("AI-101 ".*jsonobj.components)
+    tagdict[k] = fracs[ii]
+end
+
+readvalues!(thermoinfo, tagdict)
+translate!(tagdict, plantstate.measurements, thermoinfo.values)
+readvalues!(plantstate, tagdict)
