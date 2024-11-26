@@ -4,10 +4,6 @@ include("_Species.jl")
 
 import Clapeyron.molecular_weight
 
-function label2symbol(name::AbstractString)
-    return Symbol(replace(lowercase(name), r"\s+"=>"_"))
-end
-
 abstract type AbstractThermo{L} end
 species(::Type{<:AbstractThermo{L}}) where L = L
 species(x::AbstractThermo{L}) where L = L

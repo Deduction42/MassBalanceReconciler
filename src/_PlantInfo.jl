@@ -24,6 +24,7 @@ Construction info for streams
 end
 
 function StreamInfo{L}(;id, massflow, phase=:unknown) where L
+    N = length(L)
     return StreamInfo{L,N}(
         id = id,
         index = Species{L, Int, N}(zero(SVector{N,Int})),

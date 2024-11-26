@@ -81,6 +81,7 @@ Volumetric flow rates
     stdev    :: Float64
 end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
+VolumeFlowMeas{S, T}(;kw...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::VolumeFlowMeas)
     stream = x[m.stream[:]]
@@ -96,9 +97,9 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
         id       = measinfo.id,
         tag      = measinfo.tags[1],
         value    = 0.0,
-        stdev    = measinfo.stdev,
+        stdev    = measinfo.stdev[1],
         stream   = streams[measinfo.stream].index,
-        molarvol = molar_volumes(thermo[measinfo.stream])
+        molarvol = Species{S}(molar_volumes(thermo[measinfo.stream]))
     )
 end
 
@@ -114,6 +115,7 @@ Mass flow rates
     stdev       :: Float64
 end
 MassFlowMeas{S, T}(x...) where {S,T}  = MassFlowMeas{S, T, length(S)}(x...)
+MassFlowMeas{S, T}(;kw...) where {S,T}  = MassFlowMeas{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::MassFlowMeas)
     stream = x[m.stream[:]]
@@ -129,9 +131,9 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
         id        = measinfo.id,
         tag       = measinfo.tags[1],
         value     = 0.0,
-        stdev     = measinfo.stdev,
+        stdev     = measinfo.stdev[1],
         stream    = streams[measinfo.stream].index,
-        molarmass = molar_weights(thermo[measinfo.stream])
+        molarmass = Species{S}(molar_weights(thermo[measinfo.stream]))
     )
 end
 
@@ -146,6 +148,7 @@ Molar Analysis
     stdev   :: Species{S, Float64, N}
 end
 MoleAnalyzer{S, T}(x...) where {S,T} = MoleAnalyzer{S, T, length(S)}(x...)
+MoleAnalyzer{S, T}(;kw...) where {S,T} = MoleAnalyzer{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::MoleAnalyzer)
     stream = x[m.stream[:]]
@@ -160,12 +163,12 @@ function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol,
         error("Measurement Type: MassFlowMeas only supports $(N) tags, measurement id '$(measid)' contains $(length(measinfo.tags))")
     end
 
-    return MoleAnalyzer{S, String}(
+    return MoleAnalyzer{S, Float64}(
         id       = measid,
         tag      = Species{S,String}(measinfo.tags),
         value    = zero(Species{S,Float64,N}),
-        stdev    = measinfo.stdev,
-        stream   = streams[measinfo.stream]
+        stdev    = Species{S,Float64,N}(measinfo.stdev),
+        stream   = streams[measinfo.stream].index
     )
 end
 
@@ -183,6 +186,7 @@ Mole Balancer
     stdev     :: Species{S, Float64, N}
 end
 MoleBalance{S, T}(x...) where {S,T} = MoleBalance{S, T, length(S)}(x...)
+MoleBalance{S, T}(;kw...) where {S,T} = MoleBalance{S, T, length(S)}(;kw...)
 
 function stateindex(m::MoleBalance)
     return [
@@ -211,9 +215,10 @@ function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, 
     return MoleBalance{S, Float64}(
         id        = nodeid,
         value     = zero(Species{S, Float64, N}),
+        interval  = 0.0,
         stdev     = Species{S}(nodeinfo.stdev),
-        inlets    = [streams[id] for id in nodeinfo.inlets],
-        outlets   = [streams[id] for id in nodeinfo.outlets],
+        inlets    = [streams[id].index for id in nodeinfo.inlets],
+        outlets   = [streams[id].index for id in nodeinfo.outlets],
         reactions = nodeinfo.reactions
     )
 end

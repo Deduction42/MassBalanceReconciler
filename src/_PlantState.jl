@@ -1,6 +1,7 @@
 include("_AbstractMeas.jl")
+using LinearAlgebra
 
-@kwdef struct PlantState{L, N<:Int}
+@kwdef struct PlantState{L, N}
     timestamp    :: Base.RefValue{Float64}
     statevec     :: Vector{Float64}
     statecov     :: Matrix{Float64}
@@ -10,7 +11,7 @@ include("_AbstractMeas.jl")
     nodes        :: Vector{NodeInfo{L,N}}
 end
 
-function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {Lc,Nc,Ls,Ns}
+function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{Ls,<:Real,Ns}}) where {Lc,Nc,Ls,Ns}
     #Read the plant info and re-index it, finding the total state length
     Nx = stateindex!(plant)
     statevec = zeros(Float64, Nx)
@@ -19,7 +20,7 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
     stream_defaults = Dict{Symbol, Species{Lc,Float64,Nc}}()
 
     for stream in plant.streams
-        state = thermo.values[stream.id]
+        state = thermo[stream.id]
 
         #Calculate the molar flow of species
         xs = state.n[:]./sum(state.n[:])
@@ -28,7 +29,7 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
         ns = Species{Ls, Float64, Ns}(nf.*xs)
 
         #Aggregate the species as components (which may be different from thermodynamic model)
-        streamval = Species{Lc, Float64, Nc}(ns)
+        streamval = Species{Lc}(ns)
 
         #Store results
         stream_defaults[stream.id] = streamval
@@ -52,10 +53,10 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
 
     #Build the predictor based on relationships, and the noise intensity based off initial state covariance
     A = zeros(Nx,Nx)
-    stream_dict = Dict{Symbol, Species{Lc,Float64,Nc}}(x.id=>x for x in plant.streams)
+    stream_dict = Dict{Symbol, StreamInfo{Lc,Nc}}(x.id=>x for x in plant.streams)
     for relationship in plant.relationships
-        streamind = stream_dict[relationship.id].data 
-        parentind = stream_dict[relationship.parent].data 
+        streamind = stream_dict[relationship.id].index.data 
+        parentind = stream_dict[relationship.parent].index.data 
         
         for (s,p) in zip(streamind, parentind)
             A[s,s] = -1/relationship.timeconst
@@ -65,19 +66,21 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
 
     #Noise intensity is assumed to be quite large (trust measurements) such that it reaches typical magnitude in 60 seconds
     Q = statecov./60 
-    dpredictor = @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}(A,Q)
+    dpredictor = (A=A, Q=Q)
 
 
     #Build the measurements based off the thermodynamic information
-    meascollection = MeasCollection{S,Float32}()
+    meascollection = MeasCollection{Lc,Float64}()
 
     for measinfo in plant.measurements
         type = measinfo.type
-        push!(meascollection[type], build(type, measinfo, stream_dict, thermo))
+        meas = build(type, measinfo, stream_dict, thermo)
+        push!(meascollection[type], meas)
     end
 
     for nodeinfo in plant.nodes
-        push!(meascollection[MoleBalance], build(MoleBalance, nodeinfo, stream_dict))
+        meas = build(MoleBalance, nodeinfo, stream_dict)
+        push!(meascollection[MoleBalance], meas)
     end
 
 
@@ -88,8 +91,8 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::ThermoInfo{Ls,Ns}) where {L
         statecov = statecov,
         dpredictor = dpredictor,
         measurements = meascollection,
-        streams = plantinfo.streams,
-        nodes = plantinfo.nodes
+        streams = plant.streams,
+        nodes = plant.nodes
     )
 end
 
