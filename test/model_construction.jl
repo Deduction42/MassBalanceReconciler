@@ -81,7 +81,7 @@ measinfo = [
     MeasInfo(
         id    = :s1_analyzer,
         type  = MoleAnalyzer,
-        tags  = ["AI-101-CO2","AI-101-CH4","AI-101-NO2","AI-101-Other"],
+        tags  = ["AI-101 CO2","AI-101 CH4","AI-101 NO2","AI-101 Other"],
         stdev = [0.01, 0.01, 0.01, 0.01],
         stream = :s1
     )
