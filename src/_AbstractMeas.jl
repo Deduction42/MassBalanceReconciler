@@ -28,7 +28,12 @@ readvalue(m::AbstractMeas{S,T}, d::Dict) where {S,T} = setvalue(m, getvalue(d, m
 updatethermo(m::AbstractMeas, d::Dict{Symbol,<:ThermoState}) = m
 
 function negloglik(x::AbstractVector{T}, m::AbstractVector{<:AbstractMeas}) where T <: Real
-    return sum(Base.Fix1(negloglik, x), m, init=zero(promote_type(T,Float64)))
+    RT = promote_type(T,Float64)
+    if isempty(m)
+        return zero(RT)
+    else
+        return sum(Base.Fix1(negloglik, x), m)
+    end
 end
 
 
@@ -212,12 +217,13 @@ function stateindex(m::MoleBalance)
 end
 
 function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where {S,T,N}
-    balinit = zero(SVector{N, promote_type(T,Float64)})
+    RT = promote_type(T,Float64)
+    #balinit = zero(SVector{N, promote_type(T,Float64)})
 
     balance = (
-          sum(Base.Fix1(speciesvec, x), m.inlets, init=balinit)
-        - sum(Base.Fix1(speciesvec, x), m.outlets, init=balinit)
-        + sum(Base.Fix1(speciesvec, x), m.reactions, init=balinit)
+          (isempty(m.inlets)  ? zero(SVector{N,RT}) : sum(Base.Fix1(speciesvec, x), m.inlets))
+        - (isempty(m.outlets) ? zero(SVector{N,RT})  : sum(Base.Fix1(speciesvec, x), m.outlets))
+        + (isempty(m.reactions) ? zero(SVector{N,RT}) : sum(Base.Fix1(speciesvec, x), m.reactions))
     )
 
     return balance.*m.interval

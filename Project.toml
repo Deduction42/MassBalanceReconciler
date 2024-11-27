@@ -6,18 +6,24 @@ version = "0.0.1-DEV"
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 Clapeyron = "7c7805af-46cc-48c9-995b-ed0ed2dc909a"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TimeRecords = "b543fe20-4c68-4b5f-af79-4641a0d39826"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Accessors = "0.1.38"
 Clapeyron = "0.6.5"
+ForwardDiff = "0.10.38"
 JSON3 = "1.14.1"
 LinearAlgebra = "1.11.0"
+Optim = "1.10.0"
 StaticArrays = "1.9.8"
 TimeRecords = "1.3.0"
+Zygote = "0.6.73"
 julia = "1.10"
 
 [extras]
