@@ -120,9 +120,20 @@ function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, ther
     end
 end
 
-#Build the readvalues function for PlantInfo, and ThermoInfo (needed for volume flows)
+function predict!(plant::PlantState, interval::Real)
+    Ad = exp(interval.*plant.dpredictor.A)
+    plant.statevec .= Ad*plant.statevec
+    plant.statecov .= Ad'*plant.statecov*Ad + interval.*plant.dpredictor.Q
+    return plant 
+end
 
-#Build the update functionality based off the KalmanFilter Dynamic Data Reconciliation model
+function negloglik(x::AbstractVector, plant::PlantState)
+    Δx = x .- plant.statevec
+    state_negloglik = Δx'*plant.statecov*Δx
+    meas_negloglik  = negloglik(x, plant.measurements)
+    return state_negloglik + meas_negloglik
+end
+
 
 
 

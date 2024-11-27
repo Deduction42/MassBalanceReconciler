@@ -28,7 +28,7 @@ readvalue(m::AbstractMeas{S,T}, d::Dict) where {S,T} = setvalue(m, getvalue(d, m
 updatethermo(m::AbstractMeas, d::Dict{Symbol,<:ThermoState}) = m
 
 function negloglik(x::AbstractVector{T}, m::AbstractVector{<:AbstractMeas}) where T <: Real
-    return sum(Base.Fix1(negloglik, x), m, init=zero(promotetype(T,Float64)))
+    return sum(Base.Fix1(negloglik, x), m, init=zero(promote_type(T,Float64)))
 end
 
 
@@ -211,7 +211,7 @@ function stateindex(m::MoleBalance)
     ]
 end
 
-function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Integer, N}) where {S,T,N}
+function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where {S,T,N}
     balinit = zero(SVector{N, promote_type(T,Float64)})
 
     balance = (
@@ -284,4 +284,8 @@ function updatethermo!(c::MeasCollection, d::Dict{Symbol, <:ThermoState})
         updatethermo!(c[fn], d)
     end
     return c
+end
+
+function negloglik(x::AbstractVector, c::MeasCollection)
+    return sum(fn-> negloglik(x, c[fn]), fieldnames(MeasCollection))
 end
