@@ -161,4 +161,5 @@ end
 
 readvalues!(thermoinfo, tagdict)
 translate!(tagdict, plantstate.measurements, thermoinfo.values)
+updatethermo!(plantstate, thermoinfo.values)
 readvalues!(plantstate, tagdict)

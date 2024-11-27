@@ -101,6 +101,11 @@ function readvalues!(plant::PlantState, d::AbstractDict)
     return plant
 end
 
+function updatethermo!(plant::PlantState, d::Dict{Symbol, <:ThermoState})
+    updatethermo!(plant.measurements, d)
+    return plant 
+end
+
 #=============================================================================
 Populate the tag dictionary with translated anlyzer values
 =============================================================================#

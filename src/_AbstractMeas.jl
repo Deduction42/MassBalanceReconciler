@@ -25,6 +25,7 @@ getvalue(d::Dict, v::AbstractVector) = map(Base.Fix1(getindex, d), v)
 getvalue(d::Dict, v::Species{S}) where S = Species{S}(getvalue(d, v[:]))
 
 readvalue(m::AbstractMeas{S,T}, d::Dict) where {S,T} = setvalue(m, getvalue(d, m.tag))
+updatethermo(m::AbstractMeas, d::Dict{Symbol,<:ThermoState}) = m
 
 function negloglik(x::AbstractVector{T}, m::AbstractVector{<:AbstractMeas}) where T <: Real
     return sum(Base.Fix1(negloglik, x), m, init=zero(promotetype(T,Float64)))
@@ -105,6 +106,10 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
     )
 end
 
+function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
+    return @set meas.molarvol = Species{S}(molar_volumes(thermo[meas.streamid]))
+end
+
 #=============================================================================
 Mass flow rates
 =============================================================================#
@@ -139,6 +144,10 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
         stream    = streams[measinfo.stream].index,
         molarmass = Species{S}(molar_weights(thermo[measinfo.stream]))
     )
+end
+
+function updatethermo(meas::MassFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
+    return @set meas.molarmass = Species{S}(molar_weights(thermo[meas.streamid]))
 end
 
 #=============================================================================
@@ -250,10 +259,9 @@ Base.getindex(m::MeasCollection, k::AbstractVector) = map(Base.Fix1(getindex, m)
 Base.getindex(m::MeasCollection, k::Tuple) = map(Base.Fix1(getindex, m), k)
 
 function readvalues!(vmeas::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}
+    reader = Base.Fix2(readvalue, d)
     if hasfield(M, :tag)
-        for (ii, m) in enumerate(vmeas)
-            vmeas[ii] = readvalue(m, d)
-        end
+        vmeas .= reader.(vmeas)
     end
     return vmeas
 end
@@ -262,7 +270,18 @@ function readvalues!(c::MeasCollection, d::Dict)
     for fn in fieldnames(MeasCollection)
         readvalues!(c[fn], d)
     end
+    return c
 end
 
+function updatethermo!(vmeas::AbstractVector{M}, d::Dict{Symbol, <:ThermoState}) where {M <: AbstractMeas}
+    updater = Base.Fix2(updatethermo, d)
+    vmeas .= updater.(vmeas)
+    return vmeas
+end
 
-
+function updatethermo!(c::MeasCollection, d::Dict{Symbol, <:ThermoState})
+    for fn in fieldnames(MeasCollection)
+        updatethermo!(c[fn], d)
+    end
+    return c
+end
