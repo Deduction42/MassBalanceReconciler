@@ -1,7 +1,7 @@
 module MassBalanceReconciler
-include("_PlantState.jl")
+include("data_reconciliation.jl")
 export 
-    PlantState, predict!, negloglik,
+    PlantState, predict!, negloglik, reconcile!,
     AbstractMeas, AbstractSingleMeas, AbstractMultiMeas, VolumeFlowMeas, MassFlowMeas, MoleAnalyzer, MoleBalance, MeasCollection,
     readvalue, readvalues, readvalues!, build, translate!, updatethermo, updatethermo!, prediction,
     PlantInfo, StreamInfo, NodeInfo, MeasInfo, StreamRelationship, ThermoInfo, stateindex, stateindex!, add_reaction!,

@@ -166,4 +166,7 @@ updatethermo!(plantstate, thermoinfo.values)
 readvalues!(plantstate, tagdict)
 
 predict!(plantstate, 60)
+statevec = deepcopy(plantstate.statevec)
 negloglik(plantstate.statevec, plantstate)
+
+@time results = reconcile!(plantstate)
