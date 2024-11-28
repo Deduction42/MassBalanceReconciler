@@ -104,3 +104,9 @@ stoich_extent(reaction::AbstractVector, input::AbstractVector)
 Finds maximum reaction extent based on stoichiometry and the limiting reagent
 """
 stoich_extent(reaction::AbstractVector, input::AbstractVector) = mapreduce(stoich_extent, min, reaction, input)
+
+#=============================================================================
+Default methods for total and specific aggregation (only works for same type)
+=============================================================================#
+total(::Type{<:Species{Lc}}, s::Species{Lc}) where Lc = return s
+specific(::Type{<:Species{Lc}}, s::Species{Lc}, fracs=nothing) where Lc = return s

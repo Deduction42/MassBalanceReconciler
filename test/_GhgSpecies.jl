@@ -2,23 +2,55 @@ GHG = (:CO2, :CH4, :N2O, :other)
 
 const GhgSpecies{T} = Species{GHG, T, 4} where T
 
-function GhgSpecies{T}(mixture::Species{L}, ghgmap::GhgSpecies{Union{Symbol,Nothing}}) where {L,T}
-    function get_ghg(ghg::Symbol)
-        translation = ghgmap[ghg]
-        if isnothing(translation)
-            return zero(T)
-        else
-            return mixture[translation]
-        end
-    end
+"""
+buildmap(mapping::GhgSpecies{Symbol}, species::NTuple{N,Symbol}) where N
 
-    gases = species(GhgSpecies)[begin:(end-1)]
-    gasvals = get_ghg.(gases)
+Uses "mapping" (which maps GHG to symbols in "species"). 
+    Returns a GhgSpecies{Vecotr{Int}} that can be used to quickly look up components of "species"
+"""
+function buildmap(mapping::GhgSpecies{Symbol}, species::NTuple{N,Symbol}) where N
+    findspecies(gas::Symbol) = findall(x->(x==mapping[gas]), species)
 
-    return GhgSpecies{T}((gasvals..., sum(mixture)-sum(gasvals)))
+    gasmap = GhgSpecies{Vector{Int}}(
+        CO2 = findspecies(:CO2),
+        CH4 = findspecies(:CH4),
+        N2O = findspecies(:N2O),
+        other = Vector(1:N)
+    )
+    setdiff!(gasmap[:other], union(gasmap[:CO2], gasmap[:CH4], gasmap[:N2O]))
+
+    return gasmap
 end
 
-GhgSpecies(mixture::Species{L,T}, ghgmap::GhgSpecies{Union{Symbol,Nothing}}) where {L,T} = GhgSpecies{T}(mixture, ghgmap)
+"""
+total(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+
+Aggegates "species" into GHG categories as a total
+"""
+function ghgtotal(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+    function get_total(inds)
+        return sum(ind->mixture[ind], inds, init=zero(T))
+    end
+    return GhgSpecies{T}(get_total.(ghgmap))
+end
+
+"""
+specific(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+
+Aggegates specific properies of "species" as GHG categories (using mole fractions)
+"""
+function ghgspecific(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}, moles::Species{L}) where {L,T}
+    RT = promote_type(T, Float64)
+    function get_specific(inds)
+        moltot = sum(ind->moles[ind], inds)
+        if iszero(moltot)
+            return sum(ind->mixture[ind], inds)/length(inds)
+        else
+            return sum(ind->mixture[ind]*moles[ind]/moltot, inds)
+        end
+    end
+    return GhgSpecies{RT}(get_specific.(ghgmap))
+end
 
 #=======================================================================================
 # Test code

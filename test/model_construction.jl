@@ -30,7 +30,8 @@ clapmap = Dict{Symbol,String}(
     :h2s => "hydrogen sulfide",
     :hydrogen => "hydrogen",
     :helium => "helium",
-    :argon => "argon"
+    :argon => "argon",
+    :n2o => "nitrous oxide"
 )
 
 GASES = Tuple(collect(keys(clapmap)))
@@ -40,7 +41,7 @@ plantinfo = PlantInfo{GHG}()
 nodeinfo = [
     NodeInfo{GHG}(
         id = :v1,
-        stdev = Species{GHG}([10.0, 10.0, 10.0, 20.0]),
+        stdev = Species{GHG}([10.0, 10.0, 10.0, 10.0]),
         inlets = [:s1, :s2],
         outlets = [:s3]
     )
@@ -69,14 +70,14 @@ measinfo = [
         id = :s1_volume,
         type  = VolumeFlowMeas,
         tags  = ["FI-101"],
-        stdev = [0.1],
+        stdev = [0.01],
         stream = :s1
     ),
     MeasInfo(
         id = :s2_mass,
         type = MassFlowMeas,
         tags = ["FI-102"],
-        stdev = [0.01],
+        stdev = [0.001],
         stream = :s2
     ),
     MeasInfo(
@@ -109,20 +110,25 @@ jsonobj = open(joinpath(@__DIR__,"analyzer.json")) do fh
 end
 
 const ANALYZER_SPECIES = Tuple(label2symbol.(jsonobj.components))
-const GHG_MAP = GhgSpecies{Union{Symbol,Nothing}}(
-    CO2   = :co2,
-    CH4   = :methane,
-    N2O   = nothing,
-    other = nothing
+const GHG_MAP = buildmap(
+    GhgSpecies{Symbol}(
+        CO2   = :co2,
+        CH4   = :methane,
+        N2O   = :n2o,
+        other = :nothing
+    ),
+    ANALYZER_SPECIES
 )
-GhgSpecies(mixture::Species{ANALYZER_SPECIES}) = GhgSpecies(mixture, GHG_MAP)
-GhgSpecies{T}(mixture::Species{ANALYZER_SPECIES}) where T = GhgSpecies{T}(mixture, GHG_MAP)
 
-MassBalanceReconciler.Species{GHG}(mixture::Species{ANALYZER_SPECIES}) = GhgSpecies(mixture)
-MassBalanceReconciler.Species{GHG,T}(mixture::Species{ANALYZER_SPECIES}) where T = GhgSpecies{T}(mixture)
+#Define the total and specific aggregations
+MassBalanceReconciler.total(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}) = ghgtotal(GHG_MAP, mixture)
+function MassBalanceReconciler.specific(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
+    return ghgspecific(GHG_MAP, mixture, fracs)
+end
+
 
 moledict = Dict(label2symbol.(jsonobj.components) .=> jsonobj.mole_percents)
-molepercents = Species{ANALYZER_SPECIES}([moledict[k] for k in ANALYZER_SPECIES])
+molepercents = Species{ANALYZER_SPECIES}([get(moledict, k, 0.0) for k in ANALYZER_SPECIES])
 moletags = Species{ANALYZER_SPECIES}("AI-101 ".*jsonobj.components)
 
 thermomodel = ThermoModel{ANALYZER_SPECIES}(clapmap)
@@ -163,10 +169,13 @@ end
 readvalues!(thermoinfo, tagdict)
 translate!(tagdict, plantstate.measurements, thermoinfo.values)
 updatethermo!(plantstate, thermoinfo.values)
-readvalues!(plantstate, tagdict)
 
 predict!(plantstate, 60)
+readvalues!(plantstate, tagdict, 60.0*15)
+
 statevec = deepcopy(plantstate.statevec)
 negloglik(plantstate.statevec, plantstate)
 
-@time results = reconcile!(plantstate)
+#@time results = reconcile!(plantstate)
+P0 = deepcopy(plantstate.statecov)
+P1 = reconcile_statecov!(plantstate)

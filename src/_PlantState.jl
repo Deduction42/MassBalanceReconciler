@@ -29,7 +29,7 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
         ns = Species{Ls, Float64, Ns}(nf.*xs)
 
         #Aggregate the species as components (which may be different from thermodynamic model)
-        streamval = Species{Lc}(ns)
+        streamval = total(Species{Lc}, ns)
 
         #Store results
         stream_defaults[stream.id] = streamval
@@ -49,7 +49,12 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
     end
 
     #Build the state covariance assuming the nominal values are the standard deviation
-    statecov = Matrix(Diagonal(statevec.^2))
+    avgstatevec = deepcopy(statevec)
+    for stream in plant.streams
+        ind = stream.index
+        avgstatevec[ind] .= sum(avgstatevec[ind])/Nc
+    end
+    statecov = Matrix(Diagonal(avgstatevec.^2))
 
     #Build the predictor based on relationships, and the noise intensity based off initial state covariance
     A = zeros(Nx,Nx)
@@ -96,8 +101,10 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
     )
 end
 
-function readvalues!(plant::PlantState, d::AbstractDict)
+function readvalues!(plant::PlantState, d::AbstractDict, t::Real)
+    interval = max(0.0, t - plant.timestamp[])
     readvalues!(plant.measurements, d)
+    setintervals!(plant.measurements.MoleBalance, interval)
     return plant
 end
 
@@ -111,7 +118,7 @@ Populate the tag dictionary with translated anlyzer values
 =============================================================================#
 function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
     for meas in measurements.MoleAnalyzer
-        molefracs  = Species{L}(thermo[meas.streamid].n)[:]
+        molefracs  = total(Species{L}, thermo[meas.streamid].n)[:]
         molefracs  = molefracs./sum(molefracs)
 
         for ii in eachindex(molefracs)

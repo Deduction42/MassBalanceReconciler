@@ -1,4 +1,5 @@
 using Accessors
+using LinearAlgebra
 include("_PlantInfo.jl")
 
 
@@ -11,7 +12,7 @@ eltype(::Type{<:AbstractMeas{S,T}}) where {S,T} = T
 
 stateindex(m::AbstractMeas) = collect(m.stream)
 stateindex(v::AbstractVector{<:Species})  = reduce(vcat, v)
-stateindex(v::AbstractVector{<:Reaction}) = getextent.(v)
+stateindex(v::AbstractVector{<:Reaction}) = stoich_extent.(v)
 standarderr(x::AbstractVector, m::AbstractMeas) = innovation(x,m)/m.stdev
 
 meastype(::Type{M}) where M <: AbstractMeas = Base.typename(M).wrapper
@@ -54,6 +55,8 @@ function innovation(x::AbstractVector{T}, vm::AbstractVector{AbstractSingleMeas}
     return map(Base.Fix1(innovation, x), vm)
 end
 
+noisecov(m::AbstractSingleMeas) = m.stdev^2
+
 #=============================================================================
 Multivariate measuremnts
 =============================================================================#
@@ -74,6 +77,8 @@ function innovation(x::AbstractVector{T}, vm::AbstractVector{AbstractMultiMeas{S
     end
     return result
 end
+
+noisecov(m::AbstractMultiMeas) = Diagonal(m.stdev[:].^2)
 
 #=============================================================================
 Volumetric flow rates
@@ -100,6 +105,7 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
         error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
 
+    thermostate = thermo[measinfo.stream]
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
         streamid = measinfo.stream,
@@ -107,12 +113,13 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
         value    = 0.0,
         stdev    = measinfo.stdev[1],
         stream   = streams[measinfo.stream].index,
-        molarvol = Species{S}(molar_volumes(thermo[measinfo.stream]))
+        molarvol = specific(Species{S}, molar_volumes(thermostate), thermostate.n)
     )
 end
 
 function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    return @set meas.molarvol = Species{S}(molar_volumes(thermo[meas.streamid]))
+    thermostate = thermo[meas.streamid]
+    return @set meas.molarvol = specific(Species{S}, molar_volumes(thermostate), thermostate.n)
 end
 
 #=============================================================================
@@ -140,6 +147,7 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
         error("Measurement Type: MassFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
     
+    thermostate = thermo[measinfo.stream]
     return MassFlowMeas{S, Float64}(
         id        = measinfo.id,
         streamid  = measinfo.stream,
@@ -147,12 +155,13 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
         value     = 0.0,
         stdev     = measinfo.stdev[1],
         stream    = streams[measinfo.stream].index,
-        molarmass = Species{S}(molar_weights(thermo[measinfo.stream]))
+        molarmass = specific(Species{S}, molar_weights(thermostate), thermostate.n)
     )
 end
 
 function updatethermo(meas::MassFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    return @set meas.molarmass = Species{S}(molar_weights(thermo[meas.streamid]))
+    thermostate = thermo[meas.streamid]
+    return @set meas.molarmass = specific(Species{S}, molar_weights(thermostate), thermostate.n)
 end
 
 #=============================================================================
@@ -218,12 +227,12 @@ end
 
 function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where {S,T,N}
     RT = promote_type(T,Float64)
-    #balinit = zero(SVector{N, promote_type(T,Float64)})
+    default = zero(SVector{N,RT})
 
     balance = (
-          (isempty(m.inlets)  ? zero(SVector{N,RT}) : sum(Base.Fix1(speciesvec, x), m.inlets))
-        - (isempty(m.outlets) ? zero(SVector{N,RT})  : sum(Base.Fix1(speciesvec, x), m.outlets))
-        + (isempty(m.reactions) ? zero(SVector{N,RT}) : sum(Base.Fix1(speciesvec, x), m.reactions))
+          (isempty(m.inlets)    ? default : sum(Base.Fix1(speciesvec, x), m.inlets))
+        - (isempty(m.outlets)   ? default : sum(Base.Fix1(speciesvec, x), m.outlets))
+        + (isempty(m.reactions) ? default : sum(Base.Fix1(speciesvec, x), m.reactions))
     )
 
     return balance.*m.interval
@@ -242,6 +251,15 @@ function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, 
         outlets   = [streams[id].index for id in nodeinfo.outlets],
         reactions = nodeinfo.reactions
     )
+end
+
+function setinterval(m::MoleBalance{S,T}, Δt::Real) where {S,T} 
+    return @set m.interval = T(Δt)
+end
+
+function setintervals!(vm::AbstractVector{<:MoleBalance}, Δt::Real)
+    vm .= setinterval.(vm, Δt)
+    return vm
 end
 
 #=============================================================================
