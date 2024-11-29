@@ -28,6 +28,15 @@ Species{L,T,N}(;kwargs...)  where {L,T,N}   = Species{L,T}(kwargs[L])
 Species{L,T}(;kwargs...)  where {L,T}   = Species{L,T}(kwargs[L])
 Species{L}(;kwargs...) where {L}        = Species{L}(kwargs[L])
 
+#Support for constructing with dictionaries
+Species{L,T,N}(d::Dict{Symbol}) where {L,T,N}    = Species{L,T}([d[k] for k in L])
+Species{L,T,N}(d::Dict{Symbol}, x) where {L,T,N} = Species{L,T}([get(d, k, x) for k in L])
+Species{L,T}(d::Dict{Symbol}) where {L,T}        = Species{L,T}([d[k] for k in L])
+Species{L,T}(d::Dict{Symbol}, x) where {L,T}     = Species{L,T}([get(d, k, x) for k in L])
+Species{L}(d::Dict{Symbol,T}) where {L,T}        = Species{L,T}([d[k] for k in L])
+Species{L}(d::Dict{Symbol,T}, x) where {L,T}     = Species{L,T}([get(d, k, T(x)) for k in L])
+
+
 #Indexing functions
 Base.getindex(x::Species, i::Int) = x.data[i]
 function Base.getindex(x::Species{L,T,N}, i::Symbol) where {L,T,N}
