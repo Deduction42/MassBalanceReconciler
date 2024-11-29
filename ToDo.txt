@@ -1,21 +1,7 @@
 Today
-     (1)  Build separte "ThermoInfo" object that has tags and values
-          tags   :: Dict{Symbol, ThermoState{L, String}}
-          values :: Dict{Symbol, ThermoState{L, Float64}}
-     (2)  Create the functionality to read tags into the ThermoInfo values
-     (3)  Create the functionality to read ThermoInfo into VolumeFlowMeas and MassFlowMeas 
-          MassFlowMeas only needs to be read once
-          ThermoInfo should contain VolumeFlowMeas tags when running
-
-
-(3) Optimize over negloglik() (standardized SSE)
-     -  Run the optimization algorithm over negloglik (on measurements and balances)
-     -  Use the Kalman update on innovtation
-
-(4) Use the sparse independent covariance update procedure
-     -  Build an state index generator for every measurement type
-     -  Sparse gradients (to obtain observation matrix C) for each measurement
-     -  Only update covariance along index
+     (1) "specific" is a bad name, use something like "averages" (use totals instead of total)
+     (2) molar_volumes and molar_weights should have an option to specify the output type
+          aggegations use the "specific/averages" method
 
 (5) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
      -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
