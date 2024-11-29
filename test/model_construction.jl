@@ -121,14 +121,14 @@ const GHG_MAP = buildmap(
 )
 
 #Define the total and specific aggregations
-MassBalanceReconciler.total(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}) = ghgtotal(GHG_MAP, mixture)
-function MassBalanceReconciler.specific(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
-    return ghgspecific(GHG_MAP, mixture, fracs)
+MassBalanceReconciler.totals(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}) = ghgtotals(GHG_MAP, mixture)
+function MassBalanceReconciler.averages(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
+    return ghgaverages(GHG_MAP, mixture, fracs)
 end
 
 
 moledict = Dict(label2symbol.(jsonobj.components) .=> jsonobj.mole_percents)
-molepercents = Species{ANALYZER_SPECIES}([get(moledict, k, 0.0) for k in ANALYZER_SPECIES])
+molepercents = Species{ANALYZER_SPECIES}(moledict)
 moletags = Species{ANALYZER_SPECIES}("AI-101 ".*jsonobj.components)
 
 thermomodel = ThermoModel{ANALYZER_SPECIES}(clapmap)

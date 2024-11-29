@@ -117,5 +117,5 @@ stoich_extent(reaction::AbstractVector, input::AbstractVector) = mapreduce(stoic
 #=============================================================================
 Default methods for total and specific aggregation (only works for same type)
 =============================================================================#
-total(::Type{<:Species{Lc}}, s::Species{Lc}) where Lc = return s
-specific(::Type{<:Species{Lc}}, s::Species{Lc}, fracs=nothing) where Lc = return s
+totals(::Type{<:Species{Lc}}, s::Species{Lc}) where Lc = return s
+averages(::Type{<:Species{Lc}}, s::Species{Lc}, fracs=nothing) where Lc = return s

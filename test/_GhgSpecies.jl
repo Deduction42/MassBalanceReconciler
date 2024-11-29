@@ -23,11 +23,11 @@ function buildmap(mapping::GhgSpecies{Symbol}, species::NTuple{N,Symbol}) where 
 end
 
 """
-total(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+totals(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
 
 Aggegates "species" into GHG categories as a total
 """
-function ghgtotal(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+function ghgtotals(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
     function get_total(inds)
         return sum(ind->mixture[ind], inds, init=zero(T))
     end
@@ -35,13 +35,13 @@ function ghgtotal(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Spec
 end
 
 """
-specific(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+averages(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
 
 Aggegates specific properies of "species" as GHG categories (using mole fractions)
 """
-function ghgspecific(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}, moles::Species{L}) where {L,T}
+function ghgaverages(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}, moles::Species{L}) where {L,T}
     RT = promote_type(T, Float64)
-    function get_specific(inds)
+    function get_averages(inds)
         moltot = sum(ind->moles[ind], inds)
         if iszero(moltot)
             return sum(ind->mixture[ind], inds)/length(inds)
@@ -49,7 +49,7 @@ function ghgspecific(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::S
             return sum(ind->mixture[ind]*moles[ind]/moltot, inds)
         end
     end
-    return GhgSpecies{RT}(get_specific.(ghgmap))
+    return GhgSpecies{RT}(get_averages.(ghgmap))
 end
 
 #=======================================================================================

@@ -29,7 +29,7 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
         ns = Species{Ls, Float64, Ns}(nf.*xs)
 
         #Aggregate the species as components (which may be different from thermodynamic model)
-        streamval = total(Species{Lc}, ns)
+        streamval = totals(Species{Lc}, ns)
 
         #Store results
         stream_defaults[stream.id] = streamval
@@ -118,7 +118,7 @@ Populate the tag dictionary with translated anlyzer values
 =============================================================================#
 function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
     for meas in measurements.MoleAnalyzer
-        molefracs  = total(Species{L}, thermo[meas.streamid].n)[:]
+        molefracs  = totals(Species{L}, thermo[meas.streamid].n)[:]
         molefracs  = molefracs./sum(molefracs)
 
         for ii in eachindex(molefracs)
