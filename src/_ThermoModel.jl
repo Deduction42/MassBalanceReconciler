@@ -46,6 +46,7 @@ ThermoState{L,T}(;kwargs...) where {L,T} = ThermoState{L,T,length(L)}(kwargs[fie
 
 molar_weights(model::ThermoModel{L}) where L = Species{L}(molecular_weight.(model.pure))
 molar_weights(state::ThermoState) = molar_weights(state.model)
+molar_weights(::Type{<:Species{L}}, state::ThermoState) where L = molaravgs(Species{L}, molar_weights(state), state.n)
 
 function molar_volumes(state::ThermoState{L}) where L 
     x = state.n[:]./sum(state.n[:])
@@ -54,6 +55,7 @@ function molar_volumes(state::ThermoState{L}) where L
     purevol  = volume.(state.model.pure, state.P, state.T, 1.0, phase=state.phase)
     return Species{L}(purevol.*(mixedvol/sum(purevol.*x)))
 end
+molar_volumes(::Type{<:Species{L}}, state::ThermoState) where L = molaravgs(Species{L}, molar_volumes(state), state.n)
 
 function readvalues(d::Dict{<:Any,<:ET}, obj::ThermoState{L}) where {L,ET}
     getter = Base.Fix1(getindex,d)

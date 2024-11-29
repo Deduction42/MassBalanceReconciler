@@ -117,5 +117,30 @@ stoich_extent(reaction::AbstractVector, input::AbstractVector) = mapreduce(stoic
 #=============================================================================
 Default methods for total and specific aggregation (only works for same type)
 =============================================================================#
-totals(::Type{<:Species{Lc}}, s::Species{Lc}) where Lc = return s
-molaravgs(::Type{<:Species{Lc}}, s::Species{Lc}, fracs=nothing) where Lc = return s
+totals(::Type{<:Species{L}}, s::Species{L}) where L = return s
+molaravgs(::Type{<:Species{L}}, s::Species{L}, fracs=nothing) where L = return s
+
+#=============================================================================
+More infomrative errors prompting users to define their own aggregation rules
+=============================================================================#
+function totals(::Type{<:Species{L}}, s::Species{S}) where {L,S}
+    return throw(ArgumentError("""
+    No defined way to use 'totals' (totalizing over applicable components) to convert species 
+      'S=$(S)' 
+    to 
+      'L=$(L)'
+    It is up to the user to define such conversion rules by defining:
+      totals(::Type{<:Species{L}}, s::Species{S})
+    """))
+end
+
+function molaravgs(::Type{<:Species{L}}, s::Species{S}, fracs=nothing) where {L,S}
+    return throw(ArgumentError("""
+    No defined way to use 'molaravgs' (molar averages over applicable components) to convert species
+      'S=$(S)' 
+    to 
+      'L=$(L)'
+    It is up to the user to define such conversion rules by defining:
+      molaravgs(::Type{<:Species{L}}, s::Species{S}, moles::Species{S})
+    """))
+end
