@@ -122,8 +122,8 @@ const GHG_MAP = buildmap(
 
 #Define the total and specific aggregations
 MassBalanceReconciler.totals(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}) = ghgtotals(GHG_MAP, mixture)
-function MassBalanceReconciler.averages(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
-    return ghgaverages(GHG_MAP, mixture, fracs)
+function MassBalanceReconciler.molaravgs(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
+    return ghgmolaravgs(GHG_MAP, mixture, fracs)
 end
 
 

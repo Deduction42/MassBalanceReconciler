@@ -113,13 +113,13 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
         value    = 0.0,
         stdev    = measinfo.stdev[1],
         stream   = streams[measinfo.stream].index,
-        molarvol = averages(Species{S}, molar_volumes(thermostate), thermostate.n)
+        molarvol = molaravgs(Species{S}, molar_volumes(thermostate), thermostate.n)
     )
 end
 
 function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
     thermostate = thermo[meas.streamid]
-    return @set meas.molarvol = averages(Species{S}, molar_volumes(thermostate), thermostate.n)
+    return @set meas.molarvol = molaravgs(Species{S}, molar_volumes(thermostate), thermostate.n)
 end
 
 #=============================================================================
@@ -155,13 +155,13 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
         value     = 0.0,
         stdev     = measinfo.stdev[1],
         stream    = streams[measinfo.stream].index,
-        molarmass = averages(Species{S}, molar_weights(thermostate), thermostate.n)
+        molarmass = molaravgs(Species{S}, molar_weights(thermostate), thermostate.n)
     )
 end
 
 function updatethermo(meas::MassFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
     thermostate = thermo[meas.streamid]
-    return @set meas.molarmass = averages(Species{S}, molar_weights(thermostate), thermostate.n)
+    return @set meas.molarmass = molaravgs(Species{S}, molar_weights(thermostate), thermostate.n)
 end
 
 #=============================================================================

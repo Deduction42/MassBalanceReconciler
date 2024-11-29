@@ -35,13 +35,13 @@ function ghgtotals(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Spe
 end
 
 """
-averages(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
+molaravgs(mapping::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}) where {L,T}
 
 Aggegates specific properies of "species" as GHG categories (using mole fractions)
 """
-function ghgaverages(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}, moles::Species{L}) where {L,T}
+function ghgmolaravgs(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::Species{L,T}, moles::Species{L}) where {L,T}
     RT = promote_type(T, Float64)
-    function get_averages(inds)
+    function get_molaravgs(inds)
         moltot = sum(ind->moles[ind], inds)
         if iszero(moltot)
             return sum(ind->mixture[ind], inds)/length(inds)
@@ -49,7 +49,7 @@ function ghgaverages(ghgmap::GhgSpecies{<:AbstractVector{<:Integer}}, mixture::S
             return sum(ind->mixture[ind]*moles[ind]/moltot, inds)
         end
     end
-    return GhgSpecies{RT}(get_averages.(ghgmap))
+    return GhgSpecies{RT}(get_molaravgs.(ghgmap))
 end
 
 #=======================================================================================
