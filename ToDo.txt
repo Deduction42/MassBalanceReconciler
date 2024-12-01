@@ -3,15 +3,21 @@ Today
      (2) molar_volumes and molar_weights should have an option to specify the output type
           aggegations use the "specific/averages" method
 
-(5) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
+(1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
      -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
 
-(6) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
+(2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
      -  Parent application can make any query they desire for this
 
+(Potential Mass Balance Enhancements)
+(E1) Consider a "process split" where the outlet streams must have the same concentration
+     -  Implemented like the NodeBalance
+     -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
+     -  error is deviation from the output concentration mean
+     -  this "observer" is added for every "split" node (can just be a field called "is_split")
 
 (Move GhsSpecies object outside of the package, into parennt environment)
-(1) Develop workflow for model construction
+(O0) Develop workflow for model construction
      -  Prepare the global indexer ref to be used for all JSONs
      -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
      -  From JSON, Build Vector{AbstractMeas{L,String,N}} (value is the tag to pull from the tagdict)
