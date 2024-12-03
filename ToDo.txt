@@ -10,11 +10,13 @@ Today
      -  Parent application can make any query they desire for this
 
 (Potential Mass Balance Enhancements)
-(E1) Consider a "process split" where the outlet streams must have the same concentration
-     -  Implemented like the NodeBalance
-     -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
-     -  error is deviation from the output concentration mean
-     -  this "observer" is added for every "split" node (can just be a field called "is_split")
+(E1) Consider retooling Measurements to use StreamInfo rather than Species
+     -  StreamInfo can contain refid :: Symbol (default is Symbol("")) which is populated if this stream is a split from another stream
+          - A "scale" parameter will need to be added, which is an integer reference to the state
+     -  Implement a "getindex" function for StreamInfo 
+          - If this is a split, you get the scale as well as the index and multiply together
+     -  stateindex! for StreamInfo will iterate the "index" if not a reference, otherwise will iterate only the "scale"
+     -  This will significantly reduce dimensionality for leaks
 
 (Move GhsSpecies object outside of the package, into parennt environment)
 (O0) Develop workflow for model construction
