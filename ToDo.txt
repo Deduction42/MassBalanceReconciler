@@ -1,7 +1,5 @@
 Today
-     (1) "specific" is a bad name, use something like "averages" (use totals instead of total)
-     (2) molar_volumes and molar_weights should have an option to specify the output type
-          aggegations use the "specific/averages" method
+(0) Stress-Test the system with a full composition rather than the abridged GHGs
 
 (1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
      -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
@@ -9,8 +7,7 @@ Today
 (2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
      -  Parent application can make any query they desire for this
 
-(Potential Mass Balance Enhancements)
-(E1) Consider retooling Measurements to use StreamInfo rather than Species
+(3) Retool Measurements to use StreamInfo rather than Species
      -  StreamInfo can contain refid :: Symbol (default is Symbol("")) which is populated if this stream is a split from another stream
           - A "scale" parameter will need to be added, which is an integer reference to the state
      -  Implement a "getindex" function for StreamInfo 
