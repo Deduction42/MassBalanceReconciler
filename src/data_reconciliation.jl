@@ -46,7 +46,9 @@ end
 
 
 function reconcile_statecov!(plant, meas)
-    inds = stateindex(meas)
+    inds = falses(length(plant.statevec))
+    addinds!(inds, meas)
+
     C  = observation_matrix(meas, plant.statevec)[:,inds]
     R  = noisecov(meas)
     Pi = plant.statecov[inds, inds]
@@ -63,9 +65,7 @@ function reconcile_statecov!(plant, meas)
         plant.statecov[inds, inds] .= Kp*Pi*Kp' .+ K*R*K'
 
         #Get the outer indices
-        outbool = trues(length(plant.statevec))
-        outbool[inds] .= false
-        outs = findall(outbool)
+        outs = .!inds
 
         #Update the outer covariance
         PU = Kp*(@view plant.statecov[inds, outs])

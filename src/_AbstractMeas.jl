@@ -9,15 +9,40 @@ Abstract Interface ("value" and "stdev" must be fields)
 abstract type AbstractMeas{S, T} end
 
 eltype(::Type{<:AbstractMeas{S,T}}) where {S,T} = T
-
-stateindex(m::AbstractMeas) = collect(m.stream)
-stateindex(v::AbstractVector{<:Species})  = reduce(vcat, v)
-stateindex(v::AbstractVector{<:Reaction}) = stoich_extent.(v)
-standarderr(x::AbstractVector, m::AbstractMeas) = innovation(x,m)/m.stdev
-
 meastype(::Type{M}) where M <: AbstractMeas = Base.typename(M).wrapper
 meastype(m::AbstractMeas) = meastype(typeof(m))
 
+#state index collection =======================================================
+function addinds!(inds::BitArray, v::AbstractVector{<:Integer})
+    inds[v] .= true
+    return inds 
+end
+
+function addinds!(inds::BitArray, ind::Integer)
+    inds[ind] = true
+    return inds 
+end
+
+function addinds!(inds::BitArray, s::StreamInfo) 
+    addinds!(inds, s.index[:])
+    if s.refid != :nothing
+        addinds!(inds, s.scale)
+    end
+    return inds
+end
+
+function addinds!(inds::BitArray, v::AbstractVector)
+    for x in v
+        addinds!(inds, x)
+    end
+    return inds 
+end
+
+addinds!(inds::BitArray, r::Reaction{L,<:Integer}) where L = addinds!(inds, r.extent)
+addinds!(inds::BitArray, m::AbstractMeas) = addinds!(inds, m.stream)
+
+
+#tag-reading interface ===========================================================
 setvalue(m::AbstractMeas, v) = @set m.value = v
 getvalue(m::AbstractMeas) = m.value
 
@@ -217,12 +242,11 @@ end
 MoleBalance{S, T}(x...) where {S,T} = MoleBalance{S, T, length(S)}(x...)
 MoleBalance{S, T}(;kw...) where {S,T} = MoleBalance{S, T, length(S)}(;kw...)
 
-function stateindex(m::MoleBalance)
-    return [
-        stateindex(m.inlets);
-        stateindex(m.outlets);
-        stateindex(m.reactions)
-    ]
+function addinds!(inds::BitVector, m::MoleBalance)
+    addinds!(inds, m.inlets)
+    addinds!(inds, m.outlets)
+    addinds!(inds, m.reactions)
+    return inds
 end
 
 function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where {S,T,N}

@@ -1,11 +1,17 @@
 include("_ThermoModel.jl")
 using Accessors
 
+
 function stateindex!(indref::Base.RefValue, s::Species{L}) where {L}
     N = length(L)
     start = indref[] + 1
     indref[] = indref[] + N
     return Species{L}(SVector{N}(start:indref[]))
+end
+
+function stateindex!(indref::Base.RefValue, r::Integer)
+    indref[] = indref[] + 1
+    return indref[]
 end
 
 function stateindex!(indref::Base.RefValue, r::Reaction{L}) where {L}
@@ -18,12 +24,14 @@ Construction info for streams
 =============================================================================#
 @kwdef struct StreamInfo{L, N}
     id :: Symbol
-    index :: Species{L, Int, N}
     massflow :: Float64
+    index :: Species{L, Int, N}
     phase :: Symbol = :unknown
+    refid :: Symbol = :nothing
+    scale :: Int = 0
 end
 
-function StreamInfo{L}(;id, massflow, phase=:unknown) where L
+function StreamInfo{L}(;id, massflow, refid=:nothing, phase=:unknown) where L
     N = length(L)
     return StreamInfo{L,N}(
         id = id,
@@ -34,7 +42,20 @@ function StreamInfo{L}(;id, massflow, phase=:unknown) where L
 end
 
 function stateindex!(indref::Base.RefValue, streaminfo::StreamInfo{L}) where {L}
-    return @set streaminfo.index = stateindex!(indref, streaminfo.index)
+    if streaminfo.refid == :nothing
+        return @set streaminfo.index = stateindex!(indref, streaminfo.index)
+    else
+        return @set streaminfo.scale = stateindex!(indref, streaminfo.scale)
+    end
+end
+
+function Base.getindex(v::AbstractVector, ind::StreamInfo)
+    streamvec = v[ind.index[:]]
+    if ind.refid == :nothing
+        return streamvec
+    else
+        return streamvec.*v[ind.scale]
+    end
 end
 
 #=============================================================================
@@ -79,8 +100,8 @@ Construction info for measurements
     type   :: UnionAll
     tags   :: Vector{String}
     stdev  :: Vector{Float64}
-    stream :: Symbol = Symbol("")
-    node   :: Symbol = Symbol("")
+    stream :: Symbol = :nothing
+    node   :: Symbol = :nothing
 end
 
 #=============================================================================
@@ -117,8 +138,23 @@ function stateindex!(plantinfo::PlantInfo)
         plantinfo.nodes[k] = stateindex!(indref, plantinfo.nodes[k])
     end
 
+    _fillrefs!(plantinfo.streams)
+
     return indref[]
 end
+
+function _fillrefs!(streams::Vector{<:StreamInfo})
+    streamdict = Dict( stream.id=>stream for stream in streams)
+
+    for (ii, stream) in enumerate(streams)
+        if stream.refid != :nothing
+            streams[ii] = @set stream.index = streamdict[stream.refid].index 
+        end
+    end
+    return streams
+end
+
+
 
 #=============================================================================
 Thermodynamic information (separated from plant to enable abstraction of composition)
