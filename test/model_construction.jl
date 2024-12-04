@@ -84,6 +84,7 @@ measinfo = [
         id    = :s1_analyzer,
         type  = MoleAnalyzer,
         tags  = ["AI-101 CO2","AI-101 CH4","AI-101 NO2","AI-101 Other"],
+        species = [:co2, :ch4, :no2, :other],
         stdev = [0.01, 0.01, 0.01, 0.01],
         stream = :s1
     )

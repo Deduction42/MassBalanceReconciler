@@ -1,4 +1,4 @@
-GHG = (:CO2, :CH4, :N2O, :other)
+const GHG = (:CO2, :CH4, :N2O, :other)
 
 const GhgSpecies{T} = Species{GHG, T, 4} where T
 

@@ -102,6 +102,7 @@ Construction info for measurements
     stdev  :: Vector{Float64}
     stream :: Symbol = :nothing
     node   :: Symbol = :nothing
+    species :: Vector{Symbol} = Symbol[]
 end
 
 #=============================================================================
