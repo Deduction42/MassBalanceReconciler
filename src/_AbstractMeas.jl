@@ -2,6 +2,10 @@ using Accessors
 using LinearAlgebra
 include("_PlantInfo.jl")
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Make measurements index through StreamInfo rather than Species
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 #=============================================================================
 Abstract Interface ("value" and "stdev" must be fields)
@@ -110,18 +114,17 @@ Volumetric flow rates
 =============================================================================#
 @kwdef struct VolumeFlowMeas{S, T, N} <: AbstractSingleMeas{S, T}
     id       :: Symbol
-    streamid :: Symbol
     tag      :: String
     value    :: T
     molarvol :: Species{S, Float64, N}
-    stream   :: Species{S, Int, N}
+    stream   :: StreamInfo{S, N}
     stdev    :: Float64
 end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
 VolumeFlowMeas{S, T}(;kw...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::VolumeFlowMeas)
-    stream = x[m.stream[:]]
+    stream = speciesvec(x, m.stream)
     return dot(m.molarvol[:], stream)
 end
 
@@ -133,17 +136,16 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
     thermostate = thermo[measinfo.stream]
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
-        streamid = measinfo.stream,
         tag      = measinfo.tags[1],
         value    = 0.0,
         stdev    = measinfo.stdev[1],
-        stream   = streams[measinfo.stream].index,
+        stream   = streams[measinfo.stream],
         molarvol = molar_volumes(Species{S}, thermostate)
     )
 end
 
 function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    thermostate = thermo[meas.streamid]
+    thermostate = thermo[meas.stream.id]
     return @set meas.molarvol = molar_volumes(Species{S}, thermostate)
 end
 
@@ -152,19 +154,18 @@ Mass flow rates
 =============================================================================#
 @kwdef struct MassFlowMeas{S, T, N} <: AbstractSingleMeas{S, T}
     id          :: Symbol
-    streamid    :: Symbol
     tag         :: String
     value       :: T
     molarmass   :: Species{S, Float64, N}
-    stream      :: Species{S, Int, N}
+    stream      :: StreamInfo{S, N}
     stdev       :: Float64
 end
 MassFlowMeas{S, T}(x...) where {S,T}  = MassFlowMeas{S, T, length(S)}(x...)
 MassFlowMeas{S, T}(;kw...) where {S,T}  = MassFlowMeas{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::MassFlowMeas)
-    stream = x[m.stream[:]]
-    return dot(m.molarmass[:], stream)
+    stream = speciesvec(x, m.stream)
+    return dot(m.molarmass[:], stream[:])
 end
 
 function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
@@ -175,17 +176,16 @@ function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol,
     thermostate = thermo[measinfo.stream]
     return MassFlowMeas{S, Float64}(
         id        = measinfo.id,
-        streamid  = measinfo.stream,
         tag       = measinfo.tags[1],
         value     = 0.0,
         stdev     = measinfo.stdev[1],
-        stream    = streams[measinfo.stream].index,
+        stream    = streams[measinfo.stream],
         molarmass = molar_weights(Species{S}, thermostate)
     )
 end
 
 function updatethermo(meas::MassFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    thermostate = thermo[meas.streamid]
+    thermostate = thermo[meas.stream.id]
     return @set meas.molarmass = molar_weights(Species{S}, thermostate)
 end
 
@@ -194,17 +194,16 @@ Molar Analysis
 =============================================================================#
 @kwdef struct MoleAnalyzer{S, T, N} <: AbstractMultiMeas{S, T}
     id       :: Symbol
-    streamid :: Symbol
     tag      :: Species{S, String, N}
     value    :: Species{S, T, N}
-    stream   :: Species{S, Int, N}
+    stream   :: StreamInfo{S, N}
     stdev    :: Species{S, Float64, N}
 end
 MoleAnalyzer{S, T}(x...) where {S,T} = MoleAnalyzer{S, T, length(S)}(x...)
 MoleAnalyzer{S, T}(;kw...) where {S,T} = MoleAnalyzer{S, T, length(S)}(;kw...)
 
 function prediction(x::AbstractVector, m::MoleAnalyzer)
-    stream = x[m.stream[:]]
+    stream = speciesvec(x, m.stream)
     return stream./sum(stream)
 end
 
@@ -218,11 +217,10 @@ function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol,
 
     return MoleAnalyzer{S, Float64}(
         id       = measid,
-        streamid = measinfo.stream,
         tag      = Species{S,String}(measinfo.tags),
         value    = zero(Species{S,Float64,N}),
         stdev    = Species{S,Float64,N}(measinfo.stdev),
-        stream   = streams[measinfo.stream].index
+        stream   = streams[measinfo.stream]
     )
 end
 
@@ -234,8 +232,8 @@ Mole Balancer
     id        :: Symbol
     value     :: Species{S, T, N}
     interval  :: Float64
-    inlets    :: Vector{Species{S, Int, N}}
-    outlets   :: Vector{Species{S, Int, N}}
+    inlets    :: Vector{StreamInfo{S, N}}
+    outlets   :: Vector{StreamInfo{S, N}}
     reactions :: Vector{Reaction{S, Int, N}}
     stdev     :: Species{S, Float64, N}
 end
@@ -271,8 +269,8 @@ function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, 
         value     = zero(Species{S, Float64, N}),
         interval  = 0.0,
         stdev     = Species{S}(nodeinfo.stdev),
-        inlets    = [streams[id].index for id in nodeinfo.inlets],
-        outlets   = [streams[id].index for id in nodeinfo.outlets],
+        inlets    = [streams[id] for id in nodeinfo.inlets],
+        outlets   = [streams[id] for id in nodeinfo.outlets],
         reactions = nodeinfo.reactions
     )
 end

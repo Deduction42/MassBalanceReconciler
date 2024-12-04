@@ -118,7 +118,7 @@ Populate the tag dictionary with translated anlyzer values
 =============================================================================#
 function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
     for meas in measurements.MoleAnalyzer
-        molefracs  = totals(Species{L}, thermo[meas.streamid].n)[:]
+        molefracs  = totals(Species{L}, thermo[meas.stream.id].n)[:]
         molefracs  = molefracs./sum(molefracs)
 
         for ii in eachindex(molefracs)

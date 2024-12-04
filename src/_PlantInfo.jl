@@ -49,12 +49,16 @@ function stateindex!(indref::Base.RefValue, streaminfo::StreamInfo{L}) where {L}
     end
 end
 
-function Base.getindex(v::AbstractVector, ind::StreamInfo)
-    streamvec = v[ind.index[:]]
+function Base.getindex(X::AbstractVector, ind::StreamInfo{L}) where {L}
+    return Species{L}(speciesvec(X, ind))
+end
+
+function speciesvec(X::AbstractVector, ind::StreamInfo)
+    species = speciesvec(X, ind.index)
     if ind.refid == :nothing
-        return streamvec
+        return species
     else
-        return streamvec.*v[ind.scale]
+        return species.*X[ind.scale]
     end
 end
 
