@@ -56,10 +56,6 @@ function reconcile_statecov!(plant, meas)
     K  = (Pi*C')/S
     Kp = I-K*C
 
-    display(meas.id)
-    display(Kp)
-
-
     if all(isfinite, K)
         #Update inner covariance structure
         plant.statecov[inds, inds] .= Kp*Pi*Kp' .+ K*R*K'

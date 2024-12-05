@@ -48,17 +48,17 @@ nodeinfo = [
 ]
 
 streaminfo = [
-    StreamInfo{GHG}(
+    StreamRef{GHG}(
         id = :s1,
         massflow = 20.0,
         phase = :gas
     ),
-    StreamInfo{GHG}(
+    StreamRef{GHG}(
         id = :s2,
         massflow = 10.0,
         phase = :gas
     ),
-    StreamInfo{GHG}(
+    StreamRef{GHG}(
         id = :s3,
         massflow = 10.0,
         phase = :gas
@@ -180,3 +180,5 @@ negloglik(plantstate.statevec, plantstate)
 #@time results = reconcile!(plantstate)
 P0 = deepcopy(plantstate.statecov)
 P1 = reconcile_statecov!(plantstate)
+display(P0)
+display(P1)

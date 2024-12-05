@@ -3,7 +3,7 @@ using LinearAlgebra
 include("_PlantInfo.jl")
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Make measurements index through StreamInfo rather than Species
+# Make measurements index through StreamRef rather than Species
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -27,7 +27,7 @@ function addinds!(inds::BitArray, ind::Integer)
     return inds 
 end
 
-function addinds!(inds::BitArray, s::StreamInfo) 
+function addinds!(inds::BitArray, s::StreamRef) 
     addinds!(inds, s.index[:])
     if s.refid != :nothing
         addinds!(inds, s.scale)
@@ -117,7 +117,7 @@ Volumetric flow rates
     tag      :: String
     value    :: T
     molarvol :: Species{S, Float64, N}
-    stream   :: StreamInfo{S, N}
+    stream   :: StreamRef{S, N}
     stdev    :: Float64
 end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
@@ -128,7 +128,7 @@ function prediction(x::AbstractVector, m::VolumeFlowMeas)
     return dot(m.molarvol[:], stream)
 end
 
-function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol, <:ThermoState}) where S
+function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol, <:ThermoState}) where S
     if length(measinfo.tags) != 1
         error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
@@ -157,7 +157,7 @@ Mass flow rates
     tag         :: String
     value       :: T
     molarmass   :: Species{S, Float64, N}
-    stream      :: StreamInfo{S, N}
+    stream      :: StreamRef{S, N}
     stdev       :: Float64
 end
 MassFlowMeas{S, T}(x...) where {S,T}  = MassFlowMeas{S, T, length(S)}(x...)
@@ -168,7 +168,7 @@ function prediction(x::AbstractVector, m::MassFlowMeas)
     return dot(m.molarmass[:], stream[:])
 end
 
-function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
+function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
     if length(measinfo.tags) != 1
         error("Measurement Type: MassFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
@@ -196,7 +196,7 @@ Molar Analysis
     id       :: Symbol
     tag      :: Species{S, String, N}
     value    :: Species{S, T, N}
-    stream   :: StreamInfo{S, N}
+    stream   :: StreamRef{S, N}
     stdev    :: Species{S, Float64, N}
 end
 MoleAnalyzer{S, T}(x...) where {S,T} = MoleAnalyzer{S, T, length(S)}(x...)
@@ -207,7 +207,7 @@ function prediction(x::AbstractVector, m::MoleAnalyzer)
     return stream./sum(stream)
 end
 
-function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamInfo{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
+function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
     measid = measinfo.id
     N = length(S)
 
@@ -232,8 +232,8 @@ Mole Balancer
     id        :: Symbol
     value     :: Species{S, T, N}
     interval  :: Float64
-    inlets    :: Vector{StreamInfo{S, N}}
-    outlets   :: Vector{StreamInfo{S, N}}
+    inlets    :: Vector{StreamRef{S, N}}
+    outlets   :: Vector{StreamRef{S, N}}
     reactions :: Vector{Reaction{S, Int, N}}
     stdev     :: Species{S, Float64, N}
 end
@@ -260,7 +260,7 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where
     return balance.*m.interval
 end
 
-function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamInfo{S}}) where S
+function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}) where S
     nodeid = nodeinfo.id
     N = length(S)
 

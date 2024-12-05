@@ -7,7 +7,7 @@ using LinearAlgebra
     statecov     :: Matrix{Float64}
     dpredictor   :: @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}
     measurements :: MeasCollection{L, Float64, N}
-    streams      :: Vector{StreamInfo{L,N}}
+    streams      :: Vector{StreamRef{L,N}}
     nodes        :: Vector{NodeInfo{L,N}}
 end
 
@@ -58,7 +58,7 @@ function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{
 
     #Build the predictor based on relationships, and the noise intensity based off initial state covariance
     A = zeros(Nx,Nx)
-    stream_dict = Dict{Symbol, StreamInfo{Lc,Nc}}(x.id=>x for x in plant.streams)
+    stream_dict = Dict{Symbol, StreamRef{Lc,Nc}}(x.id=>x for x in plant.streams)
     for relationship in plant.relationships
         streamind = stream_dict[relationship.id].index.data 
         parentind = stream_dict[relationship.parent].index.data 

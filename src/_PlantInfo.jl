@@ -1,5 +1,4 @@
-include("_ThermoModel.jl")
-using Accessors
+include("_AbstractStreamRef.jl")
 
 
 function stateindex!(indref::Base.RefValue, s::Species{L}) where {L}
@@ -19,48 +18,6 @@ function stateindex!(indref::Base.RefValue, r::Reaction{L}) where {L}
     return @set r.extent = indref[]
 end
 
-#=============================================================================
-Construction info for streams
-=============================================================================#
-@kwdef struct StreamInfo{L, N}
-    id :: Symbol
-    massflow :: Float64
-    index :: Species{L, Int, N}
-    phase :: Symbol = :unknown
-    refid :: Symbol = :nothing
-    scale :: Int = 0
-end
-
-function StreamInfo{L}(;id, massflow, refid=:nothing, phase=:unknown) where L
-    N = length(L)
-    return StreamInfo{L,N}(
-        id = id,
-        index = Species{L, Int, N}(zero(SVector{N,Int})),
-        massflow = massflow,
-        phase = phase
-    )
-end
-
-function stateindex!(indref::Base.RefValue, streaminfo::StreamInfo{L}) where {L}
-    if streaminfo.refid == :nothing
-        return @set streaminfo.index = stateindex!(indref, streaminfo.index)
-    else
-        return @set streaminfo.scale = stateindex!(indref, streaminfo.scale)
-    end
-end
-
-function Base.getindex(X::AbstractVector, ind::StreamInfo{L}) where {L}
-    return Species{L}(speciesvec(X, ind))
-end
-
-function speciesvec(X::AbstractVector, ind::StreamInfo)
-    species = speciesvec(X, ind.index)
-    if ind.refid == :nothing
-        return species
-    else
-        return species.*X[ind.scale]
-    end
-end
 
 #=============================================================================
 Construction info for nodes
@@ -123,7 +80,7 @@ end
 Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo{L,N}
-    streams :: Vector{StreamInfo{L,N}} = StreamInfo{L,N}[]
+    streams :: Vector{StreamRef{L,N}} = StreamRef{L,N}[]
     nodes   :: Vector{NodeInfo{L,N}}   = NodeInfo{L,N}[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
     relationships :: Vector{StreamRelationship} = StreamRelationship[]
@@ -148,7 +105,7 @@ function stateindex!(plantinfo::PlantInfo)
     return indref[]
 end
 
-function _fillrefs!(streams::Vector{<:StreamInfo})
+function _fillrefs!(streams::Vector{<:StreamRef})
     streamdict = Dict( stream.id=>stream for stream in streams)
 
     for (ii, stream) in enumerate(streams)
