@@ -1,19 +1,46 @@
-Today
-(0) Stress-Test the system with a full composition rather than the abridged GHGs
+Current Branch (cleaning up refs)
+(1) Spearate out StreamInfo and StreamRef
+     -  StreamInfo is used to parse out the JSON
+          -  Requires nominal flow and composition (or a reference to another stream with a scale)
+          -  This is used to initialize the state, and build out "StreamRef"s
+     -  StreamRef is used to reference the state vector
+          -  Basicaly current StreamInfo without massflow
 
-(1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
-     -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
+(2) Redefine Reaction as ReactionRef
+     -  This would be under a new abstract type AbstractStreamRef
+
+Merge to main and reset the DEV branch (removing aggregation)
+(1) Remove aggregation from test and Stress-Test the system with a full composition rather than the abridged GHGs
+
+(2) Add "referenced streams" to the model and stress-test the new configuration
+
+Merge to main and reset the DEV branch (dynamic reconciliation)
+(1) Build transitional code for multiple evaluations
+     (1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
+          -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
 
 (2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
      -  Parent application can make any query they desire for this
 
-(3) Retool Measurements to use StreamInfo rather than Species
-     -  StreamInfo can contain refid :: Symbol (default is Symbol("")) which is populated if this stream is a split from another stream
-          - A "scale" parameter will need to be added, which is an integer reference to the state
-     -  Implement a "getindex" function for StreamInfo 
-          - If this is a split, you get the scale as well as the index and multiply together
-     -  stateindex! for StreamInfo will iterate the "index" if not a reference, otherwise will iterate only the "scale"
-     -  This will significantly reduce dimensionality for leaks
+Redefine lumped models
+(1)  Remove current aggregation strategies (like totals and moleavgs), this adds a lot of complexity
+     -  Instead support a basic model:
+          BasicThermoModel = PR{BasicIdeal, PRAlpha, NoTranslation, vdW1fRule}
+          struct SpeciesModel
+               model :: BasicThermoModel
+               comp  :: Vector (must sum to 1) #Set to [1] if pure species
+               phase :: Symbol = :auto #Auto uses stream phase, but you can manually override this
+          end
+          -  Species can be a lumped substance with a fixed composition
+     -  Models can be combined to a mixed model
+          -  This is done once offline
+          -  Moles of the mixed model would be reconstructed based off components
+          struct ThermoModel{L, N} <: AbstractThermo{L}
+               pure   :: Species{L, SpeciesModel, N}
+               mixed  :: BasicModel #Obtained by concatenating components of all species models
+          end
+
+
 
 (Move GhsSpecies object outside of the package, into parennt environment)
 (O0) Develop workflow for model construction
