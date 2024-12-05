@@ -13,7 +13,7 @@ function stateindex!(indref::Base.RefValue, r::Integer)
     return indref[]
 end
 
-function stateindex!(indref::Base.RefValue, r::Reaction{L}) where {L}
+function stateindex!(indref::Base.RefValue, r::ReactionRef{L}) where {L}
     indref[] = indref[] + 1
     return @set r.extent = indref[]
 end
@@ -27,7 +27,7 @@ Construction info for nodes
     stdev     :: Species{L,Float64,N}
     inlets    :: Vector{Symbol}
     outlets   :: Vector{Symbol}
-    reactions :: Vector{Reaction{L, Int, N}}
+    reactions :: Vector{ReactionRef{L, N}}
 end
 
 function NodeInfo{L}(;id, inlets, outlets, stdev) where {L}
@@ -37,7 +37,7 @@ function NodeInfo{L}(;id, inlets, outlets, stdev) where {L}
         stdev  = stdev,
         inlets = inlets,
         outlets = outlets,
-        reactions = Reaction{L, Int, N}[],
+        reactions = ReactionRef{L, N}[],
     )
 end
 
@@ -50,7 +50,7 @@ end
 
 
 function add_reaction!(nodeinfo::NodeInfo{L,N}, stoich::Species) where {L,N}
-    push!(nodeinfo.reactions, Reaction{L,Int,N}(0, stoich))
+    push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
 end
 
 #=============================================================================

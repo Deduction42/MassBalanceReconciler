@@ -42,7 +42,7 @@ function addinds!(inds::BitArray, v::AbstractVector)
     return inds 
 end
 
-addinds!(inds::BitArray, r::Reaction{L,<:Integer}) where L = addinds!(inds, r.extent)
+addinds!(inds::BitArray, r::ReactionRef{L}) where L = addinds!(inds, r.extent)
 addinds!(inds::BitArray, m::AbstractMeas) = addinds!(inds, m.stream)
 
 
@@ -234,7 +234,7 @@ Mole Balancer
     interval  :: Float64
     inlets    :: Vector{StreamRef{S, N}}
     outlets   :: Vector{StreamRef{S, N}}
-    reactions :: Vector{Reaction{S, Int, N}}
+    reactions :: Vector{ReactionRef{S, N}}
     stdev     :: Species{S, Float64, N}
 end
 MoleBalance{S, T}(x...) where {S,T} = MoleBalance{S, T, length(S)}(x...)
