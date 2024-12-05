@@ -6,8 +6,10 @@ Current Branch (cleaning up refs)
      -  StreamRef is used to reference the state vector
           -  Basicaly current StreamInfo without massflow
 
-(2) Redefine Reaction as ReactionRef
-     -  This would be under a new abstract type AbstractStreamRef
+(2) Make all PlantInfo objects "Species" agnostic and easily constructable from JSON
+
+(3) PlantState should have an overarching "thermodynamic model attached"
+     -  In the future, Lumped models should have mutable mole fractions just in case
 
 Merge to main and reset the DEV branch (removing aggregation)
 (1) Remove aggregation from test and Stress-Test the system with a full composition rather than the abridged GHGs

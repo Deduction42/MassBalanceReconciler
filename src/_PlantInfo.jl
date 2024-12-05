@@ -1,53 +1,25 @@
 include("_AbstractStreamRef.jl")
 
 
-function stateindex!(indref::Base.RefValue, s::Species{L}) where {L}
-    N = length(L)
-    start = indref[] + 1
-    indref[] = indref[] + N
-    return Species{L}(SVector{N}(start:indref[]))
+#=============================================================================
+Construction info for streams
+=============================================================================#
+@kwdef struct StreamInfo
+    id        :: Symbol
+    massflow  :: Float64
+    molefracs :: Union{Symbol, Dict{Symbol, Float64}}
 end
-
-function stateindex!(indref::Base.RefValue, r::Integer)
-    indref[] = indref[] + 1
-    return indref[]
-end
-
-function stateindex!(indref::Base.RefValue, r::ReactionRef{L}) where {L}
-    indref[] = indref[] + 1
-    return @set r.extent = indref[]
-end
-
 
 #=============================================================================
 Construction info for nodes
 =============================================================================#
-@kwdef struct NodeInfo{L, N}
+@kwdef struct NodeInfo
     id        :: Symbol
-    stdev     :: Species{L,Float64,N}
+    stdev     :: Dict{Symbol, Float64}
     inlets    :: Vector{Symbol}
     outlets   :: Vector{Symbol}
-    reactions :: Vector{ReactionRef{L, N}}
+    reactions :: Vector{Dict{Symbol, Float64}} = Dict{Symbol, Float64}[]
 end
-
-function NodeInfo{L}(;id, inlets, outlets, stdev) where {L}
-    N = length(L)
-    return NodeInfo{L, N}(
-        id = id,
-        stdev  = stdev,
-        inlets = inlets,
-        outlets = outlets,
-        reactions = ReactionRef{L, N}[],
-    )
-end
-
-function stateindex!(indref::Base.RefValue, nodeinfo::NodeInfo{L}) where {L}
-    for (ii, reaction) in enumerate(nodeinfo.reactions)
-        nodeinfo.reactions[ii] = stateindex!(indref, reaction)
-    end
-    return nodeinfo
-end
-
 
 function add_reaction!(nodeinfo::NodeInfo{L,N}, stoich::Species) where {L,N}
     push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
@@ -59,11 +31,10 @@ Construction info for measurements
 @kwdef struct MeasInfo
     id     :: Symbol
     type   :: UnionAll
-    tags   :: Vector{String}
-    stdev  :: Vector{Float64}
+    tags   :: Dict{Symbol, Union{String,Float64}}
+    stdev  :: Dict{Symbol, Float64}
     stream :: Symbol = :nothing
     node   :: Symbol = :nothing
-    species :: Vector{Symbol} = Symbol[]
 end
 
 #=============================================================================
@@ -79,16 +50,16 @@ end
 #=============================================================================
 Construction info for entire system
 =============================================================================#
-@kwdef struct PlantInfo{L,N}
-    streams :: Vector{StreamRef{L,N}} = StreamRef{L,N}[]
-    nodes   :: Vector{NodeInfo{L,N}}   = NodeInfo{L,N}[]
+@kwdef struct PlantInfo
+    streams :: Vector{StreamInfo} = StreamInfo[]
+    nodes   :: Vector{NodeInfo}   = NodeInfo[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
     relationships :: Vector{StreamRelationship} = StreamRelationship[]
 end
 
 PlantInfo{L}(;kwargs...) where {L} = PlantInfo{L, length(L)}(;kwargs...)
 
-
+#=
 function stateindex!(plantinfo::PlantInfo)
     indref = Ref(0)
 
@@ -100,21 +71,13 @@ function stateindex!(plantinfo::PlantInfo)
         plantinfo.nodes[k] = stateindex!(indref, plantinfo.nodes[k])
     end
 
-    _fillrefs!(plantinfo.streams)
+    fillrefs!(plantinfo.streams)
 
     return indref[]
 end
+=#
 
-function _fillrefs!(streams::Vector{<:StreamRef})
-    streamdict = Dict( stream.id=>stream for stream in streams)
 
-    for (ii, stream) in enumerate(streams)
-        if stream.refid != :nothing
-            streams[ii] = @set stream.index = streamdict[stream.refid].index 
-        end
-    end
-    return streams
-end
 
 
 
