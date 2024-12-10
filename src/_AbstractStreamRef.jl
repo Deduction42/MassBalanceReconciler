@@ -1,6 +1,19 @@
 include("_ThermoModel.jl")
 using Accessors
 
+#=============================================================================
+Construction info for streams
+=============================================================================#
+@kwdef struct StreamInfo
+    id        :: Symbol
+    massflow  :: Float64
+    molefracs :: Union{Symbol, Dict{Symbol, Float64}}
+end
+
+
+#=============================================================================
+Abstract stream interface
+=============================================================================#
 abstract type AbstractStreamRef{L} end
 
 function stateindex!(indref::Base.RefValue, s::Species{L}) where {L}
@@ -126,6 +139,24 @@ Finds maximum reaction extent based on stoichiometry and the limiting reagent
 """
 stoich_extent(stoich::Species{L}, reagents::Species{L}) where L = mapreduce(_reagent_extent, min, stoich[:], reagents[:])
 stoich_extent(reaction::ReactionRef{L}, reagents::Species{L}) where L = stoich_extent(reaction.stoich, reagents)
+
+
+
+#=============================================================================
+Construction info for nodes
+=============================================================================#
+@kwdef struct NodeInfo
+    id        :: Symbol
+    stdev     :: Dict{Symbol, Float64}
+    inlets    :: Vector{Symbol}
+    outlets   :: Vector{Symbol}
+    reactions :: Vector{Dict{Symbol, Float64}} = Dict{Symbol, Float64}[]
+end
+
+function add_reaction!(nodeinfo::NodeInfo, stoich::Species)
+    push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
+end
+
 
 #=============================================================================
 Process nodes

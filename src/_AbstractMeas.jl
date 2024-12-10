@@ -1,11 +1,24 @@
 using Accessors
 using LinearAlgebra
-include("_PlantInfo.jl")
+include("_AbstractStreamRef.jl")
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Make measurements index through StreamRef rather than Species
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+#=============================================================================
+Construction info for measurements
+=============================================================================#
+@kwdef struct MeasInfo
+    id     :: Symbol
+    type   :: UnionAll
+    tags   :: Dict{Symbol, Union{String,Float64}}
+    stdev  :: Dict{Symbol, Float64}
+    stream :: Symbol = :nothing
+    node   :: Symbol = :nothing
+end
+
+function build(info::MeasInfo, streams::Dict{Symbol, StreamRef})
+    return build(info.type, info, streams)
+end
 
 #=============================================================================
 Abstract Interface ("value" and "stdev" must be fields)
@@ -123,11 +136,6 @@ end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
 VolumeFlowMeas{S, T}(;kw...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(;kw...)
 
-function prediction(x::AbstractVector, m::VolumeFlowMeas)
-    stream = speciesvec(x, m.stream)
-    return dot(m.molarvol[:], stream)
-end
-
 function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol, <:ThermoState}) where S
     if length(measinfo.tags) != 1
         error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
@@ -142,6 +150,11 @@ function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbo
         stream   = streams[measinfo.stream],
         molarvol = molar_volumes(Species{S}, thermostate)
     )
+end
+
+function prediction(x::AbstractVector, m::VolumeFlowMeas)
+    stream = speciesvec(x, m.stream)
+    return dot(m.molarvol[:], stream)
 end
 
 function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
@@ -303,6 +316,11 @@ Base.lastindex(m::MeasCollection) = length(fieldnames(MeasCollection))
 Base.getindex(m::MeasCollection, ::Type{T}) where T = getproperty(m, Symbol(T))
 Base.getindex(m::MeasCollection, k::AbstractVector) = map(Base.Fix1(getindex, m), k)
 Base.getindex(m::MeasCollection, k::Tuple) = map(Base.Fix1(getindex, m), k)
+
+function populate!(m::MeasCollection, info::MeasInfo, streams::Dict{Symbol, StreamRef})
+    type = info.type
+    return push!(m[type], build(type, info, streams))
+end
 
 function readvalues!(vmeas::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}
     reader = Base.Fix2(readvalue, d)

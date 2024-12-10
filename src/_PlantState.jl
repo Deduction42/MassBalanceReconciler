@@ -1,17 +1,18 @@
-include("_AbstractMeas.jl")
+include("_PlantInfo.jl")
 using LinearAlgebra
 
 @kwdef struct PlantState{L, N}
     timestamp    :: Base.RefValue{Float64}
+    model        :: ThermoModel{L,N}
     statevec     :: Vector{Float64}
     statecov     :: Matrix{Float64}
     dpredictor   :: @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}
     measurements :: MeasCollection{L, Float64, N}
     streams      :: Vector{StreamRef{L,N}}
-    nodes        :: Vector{NodeInfo{L,N}}
+    nodes        :: Vector{NodeRef{L,N}}
 end
 
-function PlantState(plant::PlantInfo{Lc,Nc}, thermo::Dict{Symbol, <:ThermoState{Ls,<:Real,Ns}}) where {Lc,Nc,Ls,Ns}
+function PlantState(plant::PlantInfo, thermo::Dict{Symbol, <:ThermoState{Ls,<:Real,Ns}}) where {Ls,Ns}
     #Read the plant info and re-index it, finding the total state length
     Nx = stateindex!(plant)
     statevec = zeros(Float64, Nx)

@@ -1,41 +1,13 @@
-include("_AbstractStreamRef.jl")
+include("_AbstractMeas.jl")
 
 
-#=============================================================================
-Construction info for streams
-=============================================================================#
-@kwdef struct StreamInfo
-    id        :: Symbol
-    massflow  :: Float64
-    molefracs :: Union{Symbol, Dict{Symbol, Float64}}
-end
 
-#=============================================================================
-Construction info for nodes
-=============================================================================#
-@kwdef struct NodeInfo
-    id        :: Symbol
-    stdev     :: Dict{Symbol, Float64}
-    inlets    :: Vector{Symbol}
-    outlets   :: Vector{Symbol}
-    reactions :: Vector{Dict{Symbol, Float64}} = Dict{Symbol, Float64}[]
-end
 
-function add_reaction!(nodeinfo::NodeInfo{L,N}, stoich::Species) where {L,N}
-    push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
-end
 
-#=============================================================================
-Construction info for measurements
-=============================================================================#
-@kwdef struct MeasInfo
-    id     :: Symbol
-    type   :: UnionAll
-    tags   :: Dict{Symbol, Union{String,Float64}}
-    stdev  :: Dict{Symbol, Float64}
-    stream :: Symbol = :nothing
-    node   :: Symbol = :nothing
-end
+
+
+
+
 
 #=============================================================================
 Construction info for simple stream relationshps
@@ -51,13 +23,13 @@ end
 Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo
+    species :: Vector{Symbol}
+    thermo  :: Dict{Symbol,Dict{String,Float64}}
     streams :: Vector{StreamInfo} = StreamInfo[]
     nodes   :: Vector{NodeInfo}   = NodeInfo[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
     relationships :: Vector{StreamRelationship} = StreamRelationship[]
 end
-
-PlantInfo{L}(;kwargs...) where {L} = PlantInfo{L, length(L)}(;kwargs...)
 
 #=
 function stateindex!(plantinfo::PlantInfo)

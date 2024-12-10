@@ -1,10 +1,16 @@
 Current Branch (cleaning up refs)
-(1) Spearate out StreamInfo and StreamRef
-     -  StreamInfo is used to parse out the JSON
-          -  Requires nominal flow and composition (or a reference to another stream with a scale)
-          -  This is used to initialize the state, and build out "StreamRef"s
-     -  StreamRef is used to reference the state vector
-          -  Basicaly current StreamInfo without massflow
+(1) Support new construction workflow:
+     -  Get species from vector
+     -  Get thermodynamic models for each species (including composite ones)
+          - ThermoModel will need to include mole fractions of composites
+     -  Define the streams (StreamInfo->StreamRef)
+     -  Define the nodes (NodeInfo->NodeRef)
+     -  Define the measurements (MeasInfo->MeasCollection)
+          -  Initialize molar weights of mass flows
+     -  Initialize the stream compositions
+     -  Volume flow meters should have "update_volume(statevec, T, P)"
+          -  Build ThermoState with (model, stream T, P)
+
 
 (2) Make all PlantInfo objects "Species" agnostic and easily constructable from JSON
 
