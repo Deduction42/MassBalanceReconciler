@@ -11,34 +11,56 @@ species(::Type{<:AbstractThermo{L}}) where L = L
 species(x::AbstractThermo{L}) where L = L
 
 #=======================================================================================
+# Structure that contains thermodynamic information to build thermo models
+=======================================================================================#
+struct ThermoInfo{T}
+    labels  :: Vector{Symbol}
+    definitions :: Dict{Symbol, T}
+end
+
+
+#=======================================================================================
 # Thermodynamic models for individual species (including composites)
 =======================================================================================#
-@kwdef struct ThermoSpecies
+@kwdef struct ThermoSubstance
     model::PR{BasicIdeal, PRAlpha, NoTranslation, vdW1fRule}
     fracs::Vector{Float64}
 end
 
-ThermoSpecies(name::String) = ThermoSpecies(PR(name),[1.0])
+ThermoSubstance(name::String) = ThermoSubstance(PR(name),[1.0])
 
-function ThermoSpecies(names::AbstractVector{String}, fracs::AbstractVector{<:Real})
-    return ThermoSpecies(PR(names), fracs/sum(fracs))
+function ThermoSubstance(names::AbstractVector{String}, fracs::AbstractVector{<:Real})
+    if length(names) != length(fracs)
+        error("names (length=$(length(names))) and fracs (length=$(length(fracs))) must have the same length")
+    end
+    return ThermoSubstance(PR(names), fracs/sum(fracs))
 end
 
-molecular_weight(model::ThermoSpecies) = molecular_weight(model.model, model.fracs)
+function ThermoSubstance(namefracs::AbstractVector{<:Pair{String,<:Real}})
+    names = [p[1] for p in namefracs]
+    fracs = [p[2] for p in namefracs]
+    return ThermoSubstance(names, fracs)
+end
+
+function ThermoSubstance(namefracs::AbstractDict{String,<:Real})
+    return ThermoSubstance(collect(pairs(namefracs)))
+end
+
+
+molecular_weight(model::ThermoSubstance) = molecular_weight(model.model, model.fracs)
 
 #=======================================================================================
 # Thermodynamic models for mixtures
 =======================================================================================#
-
 @kwdef struct ThermoModel{L, N} <: AbstractThermo{L}
-    pure    :: Species{L, ThermoSpecies, N}
+    pure    :: Species{L, ThermoSubstance, N}
     mixed   :: PR{BasicIdeal, PRAlpha, NoTranslation, vdW1fRule}
     molmap  :: SparseMatrixCSC{Float64, Int64}
     ThermoModel{L,N}(x...) where {L,N} = new{L, length(L)}(x...)
     ThermoModel{L}(x...) where L = new{L, length(L)}(x...)
 end
 
-function ThermoModel{L}(substances::AbstractVector{ThermoSpecies}) where L
+function ThermoModel{L}(substances::AbstractVector{ThermoSubstance}) where L
     mixnames = String[]
     for subst in substances
         union!(mixnames, subst.model.components)
@@ -57,13 +79,16 @@ function ThermoModel{L}(substances::AbstractVector{ThermoSpecies}) where L
     return ThermoModel{L}(Species{L}(substances), mixed, molmap)
 end
 
-
-function ThermoModel{L}(thermomap::Dict{Symbol,String}) where {L}
-    species_vec = [thermomap[s] for s in L] 
-    models = Species{L}(ThermoSpecies.(species_vec))
-
+function ThermoModel{L}(thermomap::AbstractDict{Symbol}) where {L}
+    models = Species{L}(map(s->ThermoSubstance(thermomap[s]), SVector(L)))
     return ThermoModel{L}(models)
 end
+
+function ThermoModel(info::ThermoInfo)
+    L = Tuple(info.labels)
+    return ThermoModel{L}(info.definitions)
+end
+
 
 
 
@@ -140,8 +165,8 @@ claplabels = [
 
 L = Tuple((p[1] for p in claplabels))
 clapmap = Dict(claplabels)
-
-model = ThermoModel{L}(Dict(clapmap))
+info  = ThermoInfo(collect(L), Dict(claplabels))
+model = ThermoModel(info)
 state = ThermoState{L,Float64}(model=model, T=273.15, P=101.3e3, n=Species{L}(rand(length(L))), phase=:gas)
 
 molar_weights(model)

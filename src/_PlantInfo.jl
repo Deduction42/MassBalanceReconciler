@@ -56,6 +56,7 @@ end
 #=============================================================================
 Thermodynamic information (separated from plant to enable abstraction of composition)
 =============================================================================#
+#=
 @kwdef struct ThermoInfo{L,N}
     tags   :: Dict{Symbol, ThermoState{L,String,N}}
     values :: Dict{Symbol, ThermoState{L,Float64,N}}
@@ -69,4 +70,4 @@ function readvalues!(obj::ThermoInfo, d::Dict)
     end
     return obj
 end
-
+=#
