@@ -38,22 +38,23 @@ molecular_weight(model::ThermoSpecies) = molecular_weight(model.model, model.fra
     ThermoModel{L}(x...) where L = new{L, length(L)}(x...)
 end
 
-function ThermoModel{L}(pure::AbstractVector{ThermoSpecies}) where L
-    mixcomponents = mapreduce(x->x.model.components, vcat, pure)
-    if !allunique(mixcomponents)
-        error("Components in thermodynamic models must be unique")
+function ThermoModel{L}(substances::AbstractVector{ThermoSpecies}) where L
+    mixnames = String[]
+    for subst in substances
+        union!(mixnames, subst.model.components)
     end
-    mixed = PR(mixcomponents)
+    
+    mixed  = PR(mixnames)
+    mixmap = Dict{String,Int}(k=>i for (i,k) in enumerate(mixnames))
+    molmap = zeros(Float64, (length(mixnames), length(L)))
 
-    molmap = zeros(length(mixcomponents), length(L))
-    irow = 0
-    for (icol, component) in enumerate(pure)
-        n = length(component.fracs)        
-        molmap[irow.+(1:n), icol] = component.fracs
-        irow +=  n
+    for (icol, subst) in enumerate(substances)
+        for (comp, frac) in (subst.model.components .=> subst.fracs)
+            molmap[mixmap[comp], icol] = frac
+        end
     end
 
-    return ThermoModel{L}(Species{L}(pure), mixed, molmap)
+    return ThermoModel{L}(Species{L}(substances), mixed, molmap)
 end
 
 
@@ -113,7 +114,7 @@ end
 # Test code
 =======================================================================================#
 
-clapmap = Dict{Symbol,String}(
+claplabels = [
     :methane => "methane",
     :ethane => "ethane",
     :propane => "propane",
@@ -135,10 +136,12 @@ clapmap = Dict{Symbol,String}(
     :hydrogen => "hydrogen",
     :helium => "helium",
     :argon => "argon"
-)
+]
 
-L = Tuple(collect(keys(clapmap)))
-model = ThermoModel{L}(clapmap)
+L = Tuple((p[1] for p in claplabels))
+clapmap = Dict(claplabels)
+
+model = ThermoModel{L}(Dict(clapmap))
 state = ThermoState{L,Float64}(model=model, T=273.15, P=101.3e3, n=Species{L}(rand(length(L))), phase=:gas)
 
 molar_weights(model)
