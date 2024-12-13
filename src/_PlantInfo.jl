@@ -1,4 +1,3 @@
-include("_AbstractMeas.jl")
 
 
 
@@ -9,27 +8,8 @@ include("_AbstractMeas.jl")
 
 
 
-#=============================================================================
-Construction info for simple stream relationshps
-=============================================================================#
-@kwdef struct StreamRelationship
-    id     :: Symbol
-    parent :: Symbol
-    factor :: Float64
-    timeconst :: Float64
-end
 
-#=============================================================================
-Construction info for entire system
-=============================================================================#
-@kwdef struct PlantInfo
-    species :: Vector{Symbol}
-    thermo  :: Dict{Symbol,Dict{String,Float64}}
-    streams :: Vector{StreamInfo} = StreamInfo[]
-    nodes   :: Vector{NodeInfo}   = NodeInfo[]
-    measurements  :: Vector{MeasInfo}  = MeasInfo[]
-    relationships :: Vector{StreamRelationship} = StreamRelationship[]
-end
+
 
 #=
 function stateindex!(plantinfo::PlantInfo)

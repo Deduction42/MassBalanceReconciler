@@ -134,7 +134,7 @@ function readvalues(d::Dict{<:Any,<:ET}, obj::ThermoState{L}) where {L,ET}
 end
 
 
-
+#=
 #=======================================================================================
 # Test code
 =======================================================================================#
@@ -171,5 +171,5 @@ state = ThermoState{L,Float64}(model=model, T=273.15, P=101.3e3, n=Species{L}(ra
 
 molar_weights(model)
 molar_volumes(state)
-
+=#
 

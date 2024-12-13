@@ -1,5 +1,19 @@
-include("_PlantInfo.jl")
+include("_AbstractMeas.jl")
 using LinearAlgebra
+
+#=============================================================================
+Construction info for entire system
+=============================================================================#
+@kwdef struct PlantInfo
+    species :: Vector{Symbol}
+    thermo  :: Dict{Symbol,Dict{String,Float64}}
+    streams :: Vector{StreamInfo} = StreamInfo[]
+    nodes   :: Vector{NodeInfo}   = NodeInfo[]
+    measurements  :: Vector{MeasInfo}  = MeasInfo[]
+    relationships :: Vector{StreamRelationship} = StreamRelationship[]
+end
+
+
 
 @kwdef struct PlantState{L, N}
     timestamp    :: Base.RefValue{Float64}

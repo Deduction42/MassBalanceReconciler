@@ -72,24 +72,27 @@ function Base.getindex(X::AbstractVector, ind::StreamRef{L}) where {L}
     return Species{L}(speciesvec(X, ind))
 end
 
-
-
 """
-fillrefs!(streams::Vector{<:StreamRef})
-Once all StremRef values have had their indices set, referenced streams can copy the original streams indices
+stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
+
+Fills out state index information for `streams`, retuns the reference of the indexer (holding the last state index)
 """
-function fillrefs!(streams::Vector{<:StreamRef})
+function stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
+    #Fill out state indexing information
+    for (ii, stream) in enumerate(streams)
+        streams[ii] = stateindex!(indref, stream)
+    end
+
+    #Some streams reference the same state but have a scalar (useful for parameterizing splits)
     streamdict = Dict(stream.id=>stream for stream in streams)
-
     for (ii, stream) in enumerate(streams)
         if stream.refid != :nothing
             streams[ii] = @set stream.index = streamdict[stream.refid].index 
         end
     end
-    return streams
+
+    return indref
 end
-
-
 
 #=============================================================================
 Chemical reactions
@@ -117,6 +120,18 @@ speciesvec(x::AbstractVector, idx::ReactionRef{L}) where L = x[idx.extent] .* sp
 
 function Base.getindex(x::AbstractVector{T}, idx::ReactionRef{L}) where {L,T}
     return Species{L}(speciesvec(x, idx))
+end
+
+"""
+stateindex!(indref::Base.RefValue, reactions::Vector{<:ReactionRef})
+
+Fills out state index information for `reactions`, retuns the reference of the indexer (holding the last state index)
+"""
+function stateindex!(indref::Base.RefValue, reactions::Vector{<:ReactionRef})
+    for (ii, reaction) in enumerate(reactions)
+        reactions[ii] = stateindex!(indref, reaction)
+    end
+    return indref
 end
 
 
@@ -170,8 +185,22 @@ Process nodes
 end
 
 function stateindex!(indref::Base.RefValue, noderef::NodeRef{L}) where {L}
-    for (ii, reaction) in enumerate(noderef.reactions)
-        noderef.reactions[ii] = stateindex!(indref, reaction)
+    return stateindex!(indref, noderef.reactions)
+end
+
+function stateindex!(indref::Base.RefValue, noderefs::Vector{<:NodeRef})
+    for noderef in noderefs
+        stateindex!(indref, noderef)
     end
-    return noderef
+    return indref
+end
+
+#=============================================================================
+Construction info for simple stream relationshps, useful for predictions
+=============================================================================#
+@kwdef struct StreamRelationship
+    id     :: Symbol
+    parent :: Symbol
+    factor :: Float64
+    timeconst :: Float64
 end
