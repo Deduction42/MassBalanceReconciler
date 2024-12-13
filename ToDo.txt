@@ -1,4 +1,4 @@
-Current Branch (cleaning up refs)
+============= Current Branch (cleaner model definitions) ==============================
 (1) Support new construction workflow:
      -  Get species from vector
      -  Get thermodynamic models for each species (including composite ones)
@@ -7,22 +7,26 @@ Current Branch (cleaning up refs)
      -  Define the nodes (NodeInfo->NodeRef)
      -  Define the measurements (MeasInfo->MeasCollection)
           -  Initialize molar weights of mass flows
+     -  Index the state
      -  Initialize the stream compositions
      -  Volume flow meters should have "update_volume(statevec, T, P)"
           -  Build ThermoState with (model, stream T, P)
-
 
 (2) Make all PlantInfo objects "Species" agnostic and easily constructable from JSON
 
 (3) PlantState should have an overarching "thermodynamic model attached"
      -  In the future, Lumped models should have mutable mole fractions just in case
 
-Merge to main and reset the DEV branch (removing aggregation)
+
+
+============= Merge to main and reset the DEV branch (removing aggregation) =============
 (1) Remove aggregation from test and Stress-Test the system with a full composition rather than the abridged GHGs
 
 (2) Add "referenced streams" to the model and stress-test the new configuration
 
-Merge to main and reset the DEV branch (dynamic reconciliation)
+
+
+============= Merge to main and reset the DEV branch (dynamic reconciliation) =============
 (1) Build transitional code for multiple evaluations
      (1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
           -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
@@ -30,27 +34,14 @@ Merge to main and reset the DEV branch (dynamic reconciliation)
 (2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
      -  Parent application can make any query they desire for this
 
-Redefine lumped models
-(1)  Remove current aggregation strategies (like totals and moleavgs), this adds a lot of complexity
-     -  Instead support a basic model:
-          BasicThermoModel = PR{BasicIdeal, PRAlpha, NoTranslation, vdW1fRule}
-          struct SpeciesModel
-               model :: BasicThermoModel
-               comp  :: Vector (must sum to 1) #Set to [1] if pure species
-               phase :: Symbol = :auto #Auto uses stream phase, but you can manually override this
-          end
-          -  Species can be a lumped substance with a fixed composition
-     -  Models can be combined to a mixed model
-          -  This is done once offline
-          -  Moles of the mixed model would be reconstructed based off components
-          struct ThermoModel{L, N} <: AbstractThermo{L}
-               pure   :: Species{L, SpeciesModel, N}
-               mixed  :: BasicModel #Obtained by concatenating components of all species models
-          end
+
+============= Merge to main and add 'units' support =============
+(1) Define AffineUnits extension to DynamicQuantities
+(2) Add "units" to each measurement definition
 
 
 
-(Move GhsSpecies object outside of the package, into parennt environment)
+============= Port to parent "Carbon" application ====================
 (O0) Develop workflow for model construction
      -  Prepare the global indexer ref to be used for all JSONs
      -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
