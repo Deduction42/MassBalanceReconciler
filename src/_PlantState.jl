@@ -6,7 +6,7 @@ Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo
     species :: Vector{Symbol}
-    thermo  :: Dict{Symbol,Dict{String,Float64}}
+    thermo  :: Dict{Symbol,Union{String, Dict{String,Float64}}}
     streams :: Vector{StreamInfo} = StreamInfo[]
     nodes   :: Vector{NodeInfo}   = NodeInfo[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
@@ -26,67 +26,50 @@ end
     nodes        :: Vector{NodeRef{L,N}}
 end
 
-function PlantState(plant::PlantInfo, thermo::Dict{Symbol, <:ThermoState{Ls,<:Real,Ns}}) where {Ls,Ns}
-    #Read the plant info and re-index it, finding the total state length
-    Nx = stateindex!(plant)
+function PlantState(plant::PlantInfo)
+    #Build the initial state index
+    indref  = Ref(0)
+
+    #Retrieve the species vector (the main plant parameter)
+    L = Tuple(plant.species)
+
+    #Build the main thermodynamic model
+    thermo  = ThermoModel{L}(plant.thermo)
+
+    #Build the streams and index them
+    streams = [StreamRef{L}(stream) for stream in plant.streams]
+    stateindex!(indref, streams)
+    streamdict = Dict(stream.id=>stream for stream in streams)
+
+    #Build the nodes and index them (mostly if they have reactions)
+    nodes = [NodeRef{L}(node, streamdict) for node in info.nodes]
+    stateindex!(indref, nodes)
+
+    #The length of the state is the final index value
+    Nx = indref[]
+
+    #Obtain the state transition object
+    dpredictor = state_transition(Nx, plant.relationships, streamdict)
+
+    #Initialize the state vector
     statevec = zeros(Float64, Nx)
 
-    #Get the default flow rate of all streams
-    stream_defaults = Dict{Symbol, Species{Lc,Float64,Nc}}()
+    #Fill the state vector according to stream flow defaults
+    fillstate!(statevec, thermo, streams, plant.streams)
 
-    for stream in plant.streams
-        state = thermo[stream.id]
-
-        #Calculate the molar flow of species
-        xs = state.n[:]./sum(state.n[:])
-        MW = dot(molar_weights(state)[:], xs)
-        nf = stream.massflow/MW
-        ns = Species{Ls, Float64, Ns}(nf.*xs)
-
-        #Aggregate the species as components (which may be different from thermodynamic model)
-        streamval = totals(Species{Lc}, ns)
-
-        #Store results
-        stream_defaults[stream.id] = streamval
-        statevec[stream.index] = streamval
-    end
-
-    #Get the reaction defaults based off limiting reagents of the inputs and assign it to the state
-    for node in plant.nodes
-        if !isempty(node.reactions)
-            inputs = sum(Base.Fix1(speciesvec, statevec), node.inlets)
-
-            for rxn in node.reactions
-                extent = stoich_extent(rxn.stoich, inputs)
-                statevec[rxn.extent] = extent
-            end
-        end
-    end
+    #Fill the state vector according to reaction stoichiometry
+    fillstate!(statevec, nodes)
 
     #Build the state covariance assuming the nominal values are the standard deviation
-    avgstatevec = deepcopy(statevec)
-    for stream in plant.streams
-        ind = stream.index
-        avgstatevec[ind] .= sum(avgstatevec[ind])/Nc
-    end
-    statecov = Matrix(Diagonal(avgstatevec.^2))
+    statecov = Matrix(Diagonal(statevec.^2))
 
-    #Build the predictor based on relationships, and the noise intensity based off initial state covariance
-    A = zeros(Nx,Nx)
-    stream_dict = Dict{Symbol, StreamRef{Lc,Nc}}(x.id=>x for x in plant.streams)
-    for relationship in plant.relationships
-        streamind = stream_dict[relationship.id].index.data 
-        parentind = stream_dict[relationship.parent].index.data 
-        
-        for (s,p) in zip(streamind, parentind)
-            A[s,s] = -1/relationship.timeconst
-            A[s,p] = relationship.factor/relationship.timeconst
-        end
-    end
+    #===============================================================================
+    Revamp the "build" functions to take ('meas info', 'filled_streams', 'thermo model')
+        Volume flow meters will need a triple (V,T,P)
+        Volume flow tags will need to be Union{String,Float64} (float64 uses constant value)
+    ===============================================================================#
+    error("Function is unfinished")
 
-    #Noise intensity is assumed to be quite large (trust measurements) such that it reaches typical magnitude in 60 seconds
-    Q = statecov./60 
-    dpredictor = (A=A, Q=Q)
 
 
     #Build the measurements based off the thermodynamic information
@@ -115,6 +98,66 @@ function PlantState(plant::PlantInfo, thermo::Dict{Symbol, <:ThermoState{Ls,<:Re
         nodes = plant.nodes
     )
 end
+
+function fillstate!(X::AbstractVector, model::ThermoModel, streamrefs::Vector{<:StreamRef}, streaminfo::Vector{StreamInfo})
+    molweights = molar_weights(model)
+
+    if length(streamrefs) != length(streaminfo)
+        error("streamrefs and streaminfo must have same lengths")
+    end
+
+    #Fill all streams that have no parent
+    for (streamref, streaminfo) in zip(streamrefs, streaminfo)
+        if !hasparent(streamrefs[ii])
+            fillstate!(X, molwegiths, streamref, streaminfo)
+        end
+    end
+
+    #Fill all streams that have a parent
+    for (streamref, streaminfo) in zip(streamrefs, streaminfo)
+        if hasparent(streamrefs[ii])
+            fillstate!(X, molwegiths, streamref, streaminfo)
+        end
+    end
+
+    return X
+end
+
+
+function fillstate!(X::AbstractVector, molweights::Species{L}, streamref::StreamRef{L}, streaminfo::StreamInfo) where L
+    if streamref.id != streaminfo.id
+        error("Identifiers of streaminfo ($(streaminfo.id)) and streamref ($(streamref.id)) must match")
+    end
+
+    if hasparent(streaminfo)
+        refmols = speciesvec(X, streamref.index)
+        refmass = dot(molweights, refmols)
+        X[streamref.scale] = streaminfo.massflow/refmass
+    else
+        molefracs = [streaminfo.molefracs[l] for l in L]
+        molemass  = dot(molweights, molefracs./sum(molefracs))
+        X[streamref.index[:]] = molefracs.*(streaminfo.massflow/molemass)
+    end
+
+    return X
+end
+
+function fillstate!(X::AbstractVector, noderefs::AbstractVector{<:NodeRef{L}}) where L
+    for noderef in noderefs
+        fillstate!(X, noderef)
+    end
+    return X 
+end
+
+function fillstate!(X::AbstractVector, noderef::NodeRef{L}) where L
+    inputs = Species{L}(sum(Base.Fix1(speciesvec, X), node.inlets))
+
+    for reaction in noderef.reactions
+        X[reaction.extent] = stoich_extent(reaction, inputs)
+    end
+    return X 
+end
+
 
 function readvalues!(plant::PlantState, d::AbstractDict, t::Real)
     interval = max(0.0, t - plant.timestamp[])

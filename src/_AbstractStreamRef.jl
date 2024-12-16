@@ -8,8 +8,9 @@ Construction info for streams
     id        :: Symbol
     massflow  :: Float64
     molefracs :: Union{Symbol, Dict{Symbol, Float64}}
+    phase     :: Symbol = :unknown
 end
-
+hasparent(info::StreamInfo) = info.molefracs isa Symbol
 
 #=============================================================================
 Abstract stream interface
@@ -39,6 +40,7 @@ Construction info for streams
     refid :: Symbol = :nothing
     scale :: Int = 0
 end
+hasparent(streamref::StreamRef) = (streamref.refid == :nothing)
 
 function StreamRef{L}(;id, refid=:nothing, phase=:unknown) where L
     N = length(L)
@@ -51,11 +53,16 @@ function StreamRef{L}(;id, refid=:nothing, phase=:unknown) where L
     )
 end
 
-function stateindex!(indref::Base.RefValue, streaminfo::StreamRef{L}) where {L}
-    if streaminfo.refid == :nothing
-        return @set streaminfo.index = stateindex!(indref, streaminfo.index)
+function StreamRef{L}(info::StreamInfo)
+    refid = hasparent(info) ? info.molefracs : :nothing
+    return StreamRef{L}(id=info.id, refid=refid, phase=info.phase)
+end
+
+function stateindex!(indref::Base.RefValue, streamref::StreamRef{L}) where {L}
+    if hasparent(streamref)
+        return @set streamref.scale = stateindex!(indref, streamref.scale)
     else
-        return @set streaminfo.scale = stateindex!(indref, streaminfo.scale)
+        return @set streamref.index = stateindex!(indref, streamref.index)
     end
 end
 
@@ -71,6 +78,8 @@ end
 function Base.getindex(X::AbstractVector, ind::StreamRef{L}) where {L}
     return Species{L}(speciesvec(X, ind))
 end
+
+
 
 """
 stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
@@ -110,6 +119,12 @@ function ReactionRef{L}(;id, stoich) where {L}
         extent = 0
     )
 end
+
+function ReactionRef{L}(id::Symbol, reactinfo::Dict{Symbol,Float64})
+    stoichvec = [reactinfo[l] for l in L]
+    return ReactionRef{L}(id=id, stoich=Species{L}(stoichvec))
+end
+
 
 function stateindex!(indref::Base.RefValue, r::ReactionRef{L}) where {L}
     indref[] = indref[] + 1
@@ -184,6 +199,18 @@ Process nodes
     reactions :: Vector{ReactionRef{L, N}}
 end
 
+function NodeRef{L}(info::NodeInfo, streamdict::Dict{Symbol, StreamRef})
+    return NodeRef{L}(
+        id = info.id,
+        stdev = info.stdev,
+        inlets  = [streamdict[id] for id in info.inlets],
+        outlets = [streamdict[id] for id in info.outlets],
+        reactions = [ReactionRef{L}(id=info.id, stoich) for stoich in info.reactions]
+    )
+end
+
+
+
 function stateindex!(indref::Base.RefValue, noderef::NodeRef{L}) where {L}
     return stateindex!(indref, noderef.reactions)
 end
@@ -203,4 +230,23 @@ Construction info for simple stream relationshps, useful for predictions
     parent :: Symbol
     factor :: Float64
     timeconst :: Float64
+end
+
+
+function state_transition(Nx::Int, relationships::Vector{StreamRelationship}, streamdict::Dict{Symbol, <:StreamRef})
+    #Build the predictor based on relationships, and the noise intensity based off initial state covariance
+    A = zeros(Nx,Nx)
+    for relationship in relationships
+        streamind = streamdict[relationship.id].index.data 
+        parentind = streamdict[relationship.parent].index.data 
+        
+        for (s,p) in zip(streamind, parentind)
+            A[s,s] = -1/relationship.timeconst
+            A[s,p] = relationship.factor/relationship.timeconst
+        end
+    end
+
+    #Noise intensity is assumed to be quite large (trust measurements) such that it reaches typical magnitude in 60 seconds
+    Q = statecov./60 
+    return (A=A, Q=Q)
 end
