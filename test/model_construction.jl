@@ -176,22 +176,23 @@ tagdict["FI-102"] = 13.0
 
 fracs = rand(length(GASES))
 fracs = fracs./sum(fracs)
-for (ii, k) in enumerate("AI-101 ".*jsonobj.components)
+for (ii, k) in enumerate("AI-101 ".*analyzerjson.components)
     tagdict[k] = fracs[ii]
 end
 
-readvalues!(thermoinfo, tagdict)
-translate!(tagdict, plantstate.measurements, thermoinfo.values)
-updatethermo!(plantstate, thermoinfo.values)
+#readvalues!(thermoinfo, tagdict)
+#translate!(tagdict, plantstate.measurements, thermoinfo.values)
 
-predict!(plantstate, 60)
 readvalues!(plantstate, tagdict, 60.0*15)
+updatethermo!(plantstate)
+predict!(plantstate, 60)
+
 
 statevec = deepcopy(plantstate.statevec)
 negloglik(plantstate.statevec, plantstate)
 
-#@time results = reconcile!(plantstate)
+@time results = reconcile_statevec!(plantstate)
 P0 = deepcopy(plantstate.statecov)
-P1 = reconcile_statecov!(plantstate)
+@time P1 = reconcile_statecov!(plantstate)
 display(P0)
 display(P1)

@@ -177,8 +177,18 @@ function prediction(x::AbstractVector, m::VolumeFlowMeas)
     return dot(m.molarvol[:], stream)
 end
 
+function innovation(x::AbstractVector, m::VolumeFlowMeas)
+    return m.value[1] - prediction(x, m)
+end
+
 function updatethermo(meas::VolumeFlowMeas{S}, statevec::AbstractVector{<:Real}, thermo::ThermoModel) where S
-    thermostate = ThermoState(thermo, meas.value[:T], meas.value[:P], statevec[meas.stream])
+    thermostate = ThermoState(
+        model = thermo, 
+        T = meas.value[:T], 
+        P = meas.value[:P], 
+        n = statevec[meas.stream],
+        phase = meas.stream.phase
+    )
     return @set meas.molarvol = molar_volumes(thermostate)
 end
 
