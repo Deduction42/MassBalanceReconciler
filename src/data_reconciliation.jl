@@ -120,7 +120,7 @@ function reconcile_statecov!(plant, meas)
 end
 
 function observation_matrix(meas::AbstractMeas, xref::AbstractVector)
-    obsfunc(x::AbstractVector) = -innovation(x, meas)s
+    obsfunc(x::AbstractVector) = -innovation(x, meas)
     return Zygote.jacobian(obsfunc, xref)[1]
 end
 
