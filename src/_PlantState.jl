@@ -17,7 +17,7 @@ end
 
 @kwdef struct PlantState{L, N}
     timestamp    :: Base.RefValue{Float64}
-    model        :: ThermoModel{L,N}
+    thermo       :: ThermoModel{L,N}
     statevec     :: Vector{Float64}
     statecov     :: Matrix{Float64}
     dpredictor   :: @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}
@@ -63,29 +63,20 @@ function PlantState(plant::PlantInfo)
     #Build the state covariance assuming the nominal values are the standard deviation
     statecov = Matrix(Diagonal(statevec.^2))
 
-    #===============================================================================
-    Revamp the "build" functions to take ('meas info', 'filled_streams', 'thermo model')
-        Volume flow meters will need a triple (V,T,P)
-        Volume flow tags will need to be Union{String,Float64} (float64 uses constant value)
-    ===============================================================================#
-    error("Function is unfinished")
-
-
 
     #Build the measurements based off the thermodynamic information
     meascollection = MeasCollection{Lc,Float64}()
 
     for measinfo in plant.measurements
-        type = measinfo.type
-        meas = build(type, measinfo, stream_dict, thermo)
-        push!(meascollection[type], meas)
+        meastype = measinfo.type
+        meas = meastype(measinfo, stream_dict, thermo)
+        push!(meascollection[meastype], meas)
     end
 
     for nodeinfo in plant.nodes
-        meas = build(MoleBalance, nodeinfo, stream_dict)
+        meas = MoleBalance(nodeinfo, stream_dict)
         push!(meascollection[MoleBalance], meas)
     end
-
 
     #Populate the final object with constructed values and pass through the stream and node information
     return PlantState{Lc,Nc}(
@@ -166,8 +157,8 @@ function readvalues!(plant::PlantState, d::AbstractDict, t::Real)
     return plant
 end
 
-function updatethermo!(plant::PlantState, d::Dict{Symbol, <:ThermoState})
-    updatethermo!(plant.measurements, d)
+function updatethermo!(plant::PlantState)
+    updatethermo!(plant.measurements, plant.statevec, plant.thermo)
     return plant 
 end
 
