@@ -145,14 +145,22 @@ function VolumeFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}
     end
     N = length(S)
     (T, P) = (298.15, 101.3e3)
-    thermostate = ThermoState{S, Float64}(thermo, T, P, Species{S}(ones(N)./N))
+    stream = streams[measinfo.stream]
+
+    thermostate = ThermoState{S, Float64}(
+        model=thermo, 
+        T=T, 
+        P=P, 
+        n=Species{S}(ones(N)./N),
+        phase=stream.phase
+    )
 
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
         tag      = VolState{Union{String,Float64}}(measinfo.tags),
         value    = VolState{Float64}(V=0.0, T=T, P=P),
-        stdev    = measinfo.stdev[1],
-        stream   = streams[measinfo.stream],
+        stdev    = measinfo.stdev[:V],
+        stream   = stream,
         molarvol = molar_volumes(thermostate)
     )
 end
@@ -200,9 +208,9 @@ function MassFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}},
     
     return MassFlowMeas{S, Float64}(
         id        = measinfo.id,
-        tag       = measinfo.tags[1],
+        tag       = first(values(measinfo.tags)),
         value     = 0.0,
-        stdev     = measinfo.stdev[1],
+        stdev     = first(values(measinfo.stdev)),
         stream    = streams[measinfo.stream],
         molarmass = molar_weights(thermo)
     )

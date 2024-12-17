@@ -110,8 +110,9 @@ ThermoState{L,T}(;kwargs...) where {L,T} = ThermoState{L,T,length(L)}(kwargs[fie
 molar_weights(model::ThermoModel{L}) where L = Species{L}(molecular_weight.(model.pure))
 molar_weights(state::ThermoState) = molar_weights(state.model)
 
-function Clapeyron.volume(state::ThermoState; T=state.T, P=state.P, n=state.n, phase=state.phase) 
-    return volume(state.model.mixed, state.P, state.T, model.molmap*n, phase=phase)
+function Clapeyron.volume(state::ThermoState; T=state.T, P=state.P, n=state.n, phase=state.phase)
+    model = state.model
+    return volume(model.mixed, state.P, state.T, model.molmap*n, phase=phase)
 end
 
 function molar_volumes(state::ThermoState{L}) where L 

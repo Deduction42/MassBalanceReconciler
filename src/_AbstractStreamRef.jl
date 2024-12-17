@@ -40,7 +40,7 @@ Construction info for streams
     refid :: Symbol = :nothing
     scale :: Int = 0
 end
-hasparent(streamref::StreamRef) = (streamref.refid == :nothing)
+hasparent(streamref::StreamRef) = (streamref.refid != :nothing)
 
 function StreamRef{L}(;id, refid=:nothing, phase=:unknown) where L
     N = length(L)
@@ -53,7 +53,7 @@ function StreamRef{L}(;id, refid=:nothing, phase=:unknown) where L
     )
 end
 
-function StreamRef{L}(info::StreamInfo)
+function StreamRef{L}(info::StreamInfo) where L
     refid = hasparent(info) ? info.molefracs : :nothing
     return StreamRef{L}(id=info.id, refid=refid, phase=info.phase)
 end
@@ -120,7 +120,7 @@ function ReactionRef{L}(;id, stoich) where {L}
     )
 end
 
-function ReactionRef{L}(id::Symbol, reactinfo::Dict{Symbol,Float64})
+function ReactionRef{L}(id::Symbol, reactinfo::Dict{Symbol,Float64}) where L
     stoichvec = [reactinfo[l] for l in L]
     return ReactionRef{L}(id=id, stoich=Species{L}(stoichvec))
 end
@@ -199,12 +199,12 @@ Process nodes
     reactions :: Vector{ReactionRef{L, N}}
 end
 
-function NodeRef{L}(info::NodeInfo, streamdict::Dict{Symbol, StreamRef})
-    return NodeRef{L}(
-        id = info.id,
-        stdev = info.stdev,
-        inlets  = [streamdict[id] for id in info.inlets],
-        outlets = [streamdict[id] for id in info.outlets],
+function NodeRef{L}(info::NodeInfo, streamdict::Dict{Symbol, <:StreamRef}) where L
+    return NodeRef{L, length(L)}(
+        id        = info.id,
+        stdev     = Species{L}(info.stdev),
+        inlets    = [streamdict[id] for id in info.inlets],
+        outlets   = [streamdict[id] for id in info.outlets],
         reactions = [ReactionRef{L}(id=info.id, stoich) for stoich in info.reactions]
     )
 end
@@ -235,18 +235,16 @@ end
 
 function state_transition(Nx::Int, relationships::Vector{StreamRelationship}, streamdict::Dict{Symbol, <:StreamRef})
     #Build the predictor based on relationships, and the noise intensity based off initial state covariance
-    A = zeros(Nx,Nx)
+    transmat = zeros(Nx, Nx)
     for relationship in relationships
         streamind = streamdict[relationship.id].index.data 
         parentind = streamdict[relationship.parent].index.data 
         
         for (s,p) in zip(streamind, parentind)
-            A[s,s] = -1/relationship.timeconst
-            A[s,p] = relationship.factor/relationship.timeconst
+            transmat[s,s] = -1/relationship.timeconst
+            transmat[s,p] = relationship.factor/relationship.timeconst
         end
     end
 
-    #Noise intensity is assumed to be quite large (trust measurements) such that it reaches typical magnitude in 60 seconds
-    Q = statecov./60 
-    return (A=A, Q=Q)
+    return transmat
 end
