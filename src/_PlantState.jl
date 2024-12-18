@@ -163,6 +163,7 @@ end
 #=============================================================================
 Populate the tag dictionary with translated anlyzer values
 =============================================================================#
+#=
 function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
     for meas in measurements.MoleAnalyzer
         molefracs  = totals(Species{L}, thermo[meas.stream.id].n)[:]
@@ -173,6 +174,7 @@ function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, ther
         end
     end
 end
+=#
 
 function predict!(plant::PlantState, interval::Real)
     Ad = exp(interval.*plant.dpredictor.A)

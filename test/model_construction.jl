@@ -122,47 +122,7 @@ plantinfo = PlantInfo(
     relationships = relationships
 )
 
-#=
-const ANALYZER_SPECIES = Tuple(label2symbol.(jsonobj.components))
-const GHG_MAP = buildmap(
-    GhgSpecies{Symbol}(
-        CO2   = :co2,
-        CH4   = :methane,
-        N2O   = :n2o,
-        other = :nothing
-    ),
-    ANALYZER_SPECIES
-)
 
-#Define the total and specific aggregations
-MassBalanceReconciler.totals(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}) = ghgtotals(GHG_MAP, mixture)
-function MassBalanceReconciler.molaravgs(::Type{<:Species{GHG}}, mixture::Species{ANALYZER_SPECIES}, fracs::Species{ANALYZER_SPECIES}) 
-    return ghgmolaravgs(GHG_MAP, mixture, fracs)
-end
-
-
-moledict = Dict(label2symbol.(jsonobj.components) .=> jsonobj.mole_percents)
-molepercents = Species{ANALYZER_SPECIES}(moledict)
-moletags = Species{ANALYZER_SPECIES}("AI-101 ".*jsonobj.components)
-
-thermomodel = ThermoModel{ANALYZER_SPECIES}(clapmap)
-thermostate = ThermoState{ANALYZER_SPECIES, Float64}(model=thermomodel, T=273+30, P=101.3, n=molepercents./sum(molepercents), phase=:gas)
-thermotags  = ThermoState{ANALYZER_SPECIES, String}(model=thermomodel, T="TI-101", P="PI-101", n=moletags, phase=:gas)
-
-
-thermoinfo = ThermoInfo{ANALYZER_SPECIES}(
-    tags   = Dict(:s1=>thermotags, :s2=>thermotags, :s3=>thermotags),
-    values = Dict(:s1=>thermostate, :s2=>thermostate, :s3=>thermostate)
-)
-=#
-
-
-
-#=
-#Test conversion/aggregation
-mixture = Species{ANALYZER_SPECIES}(rand(length(ANALYZER_SPECIES)))
-ghgs = GhgSpecies(mixture)
-=#
 
 plantstate = PlantState(plantinfo)
 
@@ -180,8 +140,6 @@ for (ii, k) in enumerate("AI-101 ".*analyzerjson.components)
     tagdict[k] = fracs[ii]
 end
 
-#readvalues!(thermoinfo, tagdict)
-#translate!(tagdict, plantstate.measurements, thermoinfo.values)
 
 readvalues!(plantstate, tagdict, 60.0*15)
 updatethermo!(plantstate)
