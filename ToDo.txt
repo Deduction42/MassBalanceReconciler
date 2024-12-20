@@ -1,28 +1,14 @@
 ============= Current Branch (cleaner model definitions) ==============================
-(1) Support new construction workflow:
-     -  Get species from vector
-     -  Get thermodynamic models for each species (including composite ones)
-          - ThermoModel will need to include mole fractions of composites
-     -  Define the streams (StreamInfo->StreamRef)
-     -  Define the nodes (NodeInfo->NodeRef)
-     -  Define the measurements (MeasInfo->MeasCollection)
-          -  Initialize molar weights of mass flows
-     -  Index the state
-     -  Initialize the stream compositions
-     -  Volume flow meters should have "update_volume(statevec, T, P)"
-          -  Build ThermoState with (model, stream T, P)
-
-(2) Make all PlantInfo objects "Species" agnostic and easily constructable from JSON
-
-(3) PlantState should have an overarching "thermodynamic model attached"
-     -  In the future, Lumped models should have mutable mole fractions just in case
+(1) Use a "referenced stream" during construction test
+(2) Build JSON constructors for PlantInfo and components
 
 
-
-============= Merge to main and reset the DEV branch (removing aggregation) =============
-(1) Remove aggregation from test and Stress-Test the system with a full composition rather than the abridged GHGs
-
-(2) Add "referenced streams" to the model and stress-test the new configuration
+============= Next branch (AffineUnits) (removing aggregation) =============
+(1) Define AffineUnits extension to DynamicQuantities
+     - Scale/Offset are for the formulas to convert INTO SI units
+     - x{C} = 5/9*x{F} - 160/9
+     - x{K} = 5/9*x{F} + 255.37
+(2) Add "units" to each measurement definition
 
 
 
@@ -35,9 +21,6 @@
      -  Parent application can make any query they desire for this
 
 
-============= Merge to main and add 'units' support =============
-(1) Define AffineUnits extension to DynamicQuantities
-(2) Add "units" to each measurement definition
 
 
 
