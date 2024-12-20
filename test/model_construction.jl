@@ -75,7 +75,7 @@ streaminfo = [
     StreamInfo(
         id = :s3,
         massflow = 10.0,
-        molefracs = compdict,
+        molefracs = :s2,
         phase = :gas
     )
 ]

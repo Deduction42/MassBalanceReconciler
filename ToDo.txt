@@ -1,14 +1,13 @@
 ============= Current Branch (cleaner model definitions) ==============================
-(1) Use a "referenced stream" during construction test
-(2) Build JSON constructors for PlantInfo and components
+(1) Build JSON constructors for PlantInfo and components
 
 
 ============= Next branch (AffineUnits) (removing aggregation) =============
 (1) Define AffineUnits extension to DynamicQuantities
      - Scale/Offset are for the formulas to convert INTO SI units
-     - x{C} = 5/9*x{F} - 160/9
-     - x{K} = 5/9*x{F} + 255.37
-(2) Add "units" to each measurement definition
+     - y{°C} = 5/9*x{°F} - 160/9  <=> 1°F = 5/9*°C - 160/9
+     - y{K}  = 5/9*x{°F} + 255.37 <=> 1°F = 5/9*K  + 255.37 
+(2) Add "units" to each measurement definition (and the JSON constructors)
 
 
 
