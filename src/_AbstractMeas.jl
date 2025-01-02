@@ -7,7 +7,7 @@ include("_AbstractStreamRef.jl")
 #=============================================================================
 Construction info for measurements
 =============================================================================#
-@kwdef struct MeasInfo
+@kwdef struct MeasInfo 
     id     :: Symbol
     type   :: UnionAll
     tags   :: Dict{Symbol, Union{String,Float64}}
@@ -16,15 +16,15 @@ Construction info for measurements
     node   :: Symbol = :nothing
 end
 
-function MeasInfo(d::AbstractDict{Symbol}) <: AbstractInfo
+function MeasInfo(d::AbstractDict{Symbol}) 
     type = eval(Meta.parse(d[:type]))
     return MeasInfo(
         id     = Symbol(d[:id]),
         type   = type,
-        tags   = symbolize(d[:tags]),
-        stdev  = symbolize(d[:stdev]),
-        stream = Symbol(d[:stream]),
-        node   = Symbol(d[:node])
+        tags   = symbolize(Union{String,Float64}, d[:tags]),
+        stdev  = symbolize(Float64, d[:stdev]),
+        stream = Symbol(get(d, :stream, :nothing)),
+        node   = Symbol(get(d, :node, :nothing))
     )
 end
 

@@ -13,10 +13,12 @@ end
 hasparent(info::StreamInfo) = info.molefracs isa Symbol
 
 function StreamInfo(d::AbstractDict{Symbol})
+    molefracs = d[:molefracs]
+
     return StreamInfo(
         id = Symbol(d[:id]),
         massflow  = d[:massflow],
-        molefracs = symbolize(d[:molefracs]),
+        molefracs = (molefracs isa AbstractDict) ? symbolize(Float64, molefracs) : symbolize(molefracs),
         phase = Symbol(get(d, :phase, :unknown))
     )
 end
@@ -197,10 +199,10 @@ end
 function NodeInfo(d::AbstractDict{Symbol})
     return NodeInfo(
         id = Symbol(d[:id]),
-        stdev  = symbolize(d[:stdev]),
+        stdev  = symbolize(Float64, d[:stdev]),
         inlets = symbolize(d[:inlets]),
         outlets = symbolize(d[:outlets]),
-        reactions = symbolize.(d[:reactions])
+        reactions = symbolize.(Float64, d[:reactions])
     )
 end
 
