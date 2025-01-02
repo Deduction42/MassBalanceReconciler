@@ -16,9 +16,25 @@ Construction info for measurements
     node   :: Symbol = :nothing
 end
 
+function MeasInfo(d::AbstractDict{Symbol}) <: AbstractInfo
+    type = eval(Meta.parse(d[:type]))
+    return MeasInfo(
+        id     = Symbol(d[:id]),
+        type   = type,
+        tags   = symbolize(d[:tags]),
+        stdev  = symbolize(d[:stdev]),
+        stream = Symbol(d[:stream]),
+        node   = Symbol(d[:node])
+    )
+end
+
+MeasInfo(d::AbstractDict{<:AbstractString}) = MeasInfo(symbolize(d))
+
+#=
 function build(info::MeasInfo, streams::Dict{Symbol, StreamRef})
     return build(info.type, info, streams)
 end
+=#
 
 #=============================================================================
 Abstract Interface ("value" and "stdev" must be fields)
@@ -347,7 +363,7 @@ Base.getindex(m::MeasCollection, k::Tuple) = map(Base.Fix1(getindex, m), k)
 
 function populate!(m::MeasCollection, info::MeasInfo, streams::Dict{Symbol, StreamRef})
     type = info.type
-    return push!(m[type], build(type, info, streams))
+    return push!(m[type], type(info, streams))
 end
 
 function readvalues!(vmeas::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}

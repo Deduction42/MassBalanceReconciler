@@ -113,9 +113,10 @@ relationships = [
     )
 ]
 
+thermoinfo = ThermoInfo(labels=collect(GASES), definitions=clapmap)
+
 plantinfo = PlantInfo(
-    species=collect(GASES), 
-    thermo=clapmap,
+    thermo=thermoinfo,
     streams = streaminfo,
     nodes = nodeinfo,
     measurements = measinfo,

@@ -4,13 +4,22 @@ using LinearAlgebra
 #=============================================================================
 Construction info for entire system
 =============================================================================#
-@kwdef struct PlantInfo
-    species :: Vector{Symbol}
-    thermo  :: Dict{Symbol,Union{String, Dict{String,Float64}}}
+@kwdef struct PlantInfo <: AbstractInfo
+    thermo  :: ThermoInfo
     streams :: Vector{StreamInfo} = StreamInfo[]
     nodes   :: Vector{NodeInfo}   = NodeInfo[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
     relationships :: Vector{StreamRelationship} = StreamRelationship[]
+end
+
+function PlantInfo(d::AbstractDict{<:Symbol})
+    return PlantInfo(
+        thermo  = ThermoInfo(d[:thermo]),
+        streams = StreamInfo.(d[:streams]),
+        nodes   = NodeInfo.(d[:nodes]),
+        measurements = MeasInfo.(d[:measurements]),
+        relationships = StreamRelationship.(d[:relationships])
+    )
 end
 
 @kwdef struct PlantState{L, N}
@@ -29,7 +38,7 @@ function PlantState(plantinfo::PlantInfo)
     indref  = Ref(0)
 
     #Retrieve the species vector (the main plant parameter)
-    L = Tuple(plantinfo.species)
+    L = Tuple(plantinfo.thermo.labels)
 
     #Build the main thermodynamic model
     thermo  = ThermoModel{L}(plantinfo.thermo)

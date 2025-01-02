@@ -4,13 +4,24 @@ using Accessors
 #=============================================================================
 Construction info for streams
 =============================================================================#
-@kwdef struct StreamInfo
+@kwdef struct StreamInfo <: AbstractInfo
     id        :: Symbol
     massflow  :: Float64
     molefracs :: Union{Symbol, Dict{Symbol, Float64}}
     phase     :: Symbol = :unknown
 end
 hasparent(info::StreamInfo) = info.molefracs isa Symbol
+
+function StreamInfo(d::AbstractDict{Symbol})
+    return StreamInfo(
+        id = Symbol(d[:id]),
+        massflow  = d[:massflow],
+        molefracs = symbolize(d[:molefracs]),
+        phase = Symbol(get(d, :phase, :unknown))
+    )
+end
+
+StreamInfo(d::AbstractDict{<:AbstractString}) = StreamInfo(symbolize(d))
 
 #=============================================================================
 Abstract stream interface
@@ -175,13 +186,25 @@ stoich_extent(reaction::ReactionRef{L}, reagents::Species{L}) where L = stoich_e
 #=============================================================================
 Construction info for nodes
 =============================================================================#
-@kwdef struct NodeInfo
+@kwdef struct NodeInfo <: AbstractInfo
     id        :: Symbol
     stdev     :: Dict{Symbol, Float64}
     inlets    :: Vector{Symbol}
     outlets   :: Vector{Symbol}
     reactions :: Vector{Dict{Symbol, Float64}} = Dict{Symbol, Float64}[]
 end
+
+function NodeInfo(d::AbstractDict{Symbol})
+    return NodeInfo(
+        id = Symbol(d[:id]),
+        stdev  = symbolize(d[:stdev]),
+        inlets = symbolize(d[:inlets]),
+        outlets = symbolize(d[:outlets]),
+        reactions = symbolize.(d[:reactions])
+    )
+end
+
+NodeInfo(d::AbstractDict{<:AbstractString}) = NodeInfo(symbolize(d))
 
 function add_reaction!(nodeinfo::NodeInfo, stoich::Species)
     push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
