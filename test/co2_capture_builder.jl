@@ -92,30 +92,30 @@ default_conc = Species{LABELS}(default_percent ./ sum(default_percent))
 #==============================================================================================
 Process nodes for a transport system
 ==============================================================================================#
-nodes = NodeInfo[]
+nodeinfo = NodeInfo[]
 
-push!(nodes, NodeInfo(
+push!(nodeinfo, NodeInfo(
     id = :capture,
     stdev   = Dict(LABELS .=> 30.0),
     inlets  = [:emissions_source],
     outlets = [:capture_loss, :to_compression]
 ))
 
-push!(nodes, NodeInfo(
+push!(nodeinfo, NodeInfo(
     id = :compression,
     stdev   = Dict(LABELS .=> 30.0),
     inlets  = [:to_compression],
     outlets = [:compression_loss, :to_transport] 
 ))
 
-push!(nodes, NodeInfo(
+push!(nodeinfo, NodeInfo(
     id = :transport,
     stdev = Dict(LABELS .=> 30.0),
     inlets = [:to_transport],
     outlets = [:transport_loss, :to_injection]
 ))
 
-push!(nodes, NodeInfo(
+push!(nodeinfo, NodeInfo(
     id = :injection,
     stdev = Dict(LABELS .=> 30.0),
     inlets  = [:to_injection],
@@ -189,3 +189,85 @@ push!(streaminfo, StreamInfo(
     molefracs = :to_injection,
     phase = :gas
 ))
+
+
+#==============================================================================================
+Measurements for the capture system
+==============================================================================================#
+measinfo = MeasInfo[]
+
+push!(measinfo, MeasInfo(
+    id = :emissions_mass_flow,
+    type = MassFlowMeas,
+    tags = Dict(:m=>"emissions_mass_flow"),
+    stdev = Dict(:m=>0.01),
+    stream = :emissions_source
+))
+
+push!(measinfo, MeasInfo(
+    id = :compressor_mass_flow,
+    type = MassFlowMeas,
+    tags = Dict(:m=>"compressor_mass_flow"),
+    stdev = Dict(:m=>0.01),
+    stream = :to_compression
+))
+
+push!(measinfo, MeasInfo(
+    id = :transport_mass_flow,
+    type = MassFlowMeas,
+    tags = Dict(:m=>"transport_mass_flow"),
+    stdev = Dict(:m=>0.01),
+    stream = :to_transport
+))
+
+push!(measinfo, MeasInfo(
+    id = :injection_mass_flow,
+    type = MassFlowMeas,
+    tags = Dict(:m=>"injection_mass_flow"),
+    stdev = Dict(:m=>0.01),
+    stream = :to_injection
+))
+
+push!(measinfo, MeasInfo(
+    id = :injection_analyzer,
+    type  = MassFlowMeas,
+    tags  = Dict(LABELS .=> "injection_analyzer." .* string.(LABELS)),
+    stdev = Dict(LABELS .=> 0.01),
+    stream = :to_injection
+))
+
+#==============================================================================================
+Stream predictions for the system
+==============================================================================================#
+relationships = StreamRelationship[]
+
+push!(relationships, StreamRelationship(
+    id = :injection_loss,
+    parent = :to_injection,
+    factor = 0.01,
+    timeconst = 60.0
+))
+
+thermoinfo = ThermoInfo(labels=collect(LABELS), definitions=Dict(clapeyron_pairs))
+
+
+#==============================================================================================
+Assemble entire system
+==============================================================================================#
+plantinfo = PlantInfo(
+    thermo=thermoinfo,
+    streams = streaminfo,
+    nodes = nodeinfo,
+    measurements = measinfo,
+    relationships = relationships
+)
+
+#==============================================================================================
+Output system to JSON
+==============================================================================================#
+io = IOBuffer()
+JSON3.pretty(io, plantinfo)
+capture_json = String(take!(io))
+capture_dict = JSON3.read(capture_json)
+reconstructed_plant = PlantInfo(capture_dict)
+#plantstate = PlantState(reconstructed_plant)

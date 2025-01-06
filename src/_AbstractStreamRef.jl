@@ -257,6 +257,14 @@ Construction info for simple stream relationshps, useful for predictions
     timeconst :: Float64
 end
 
+function StreamRelationship(d::AbstractDict{Symbol})
+    return StreamRelationship(
+        id = Symbol(d[:id]),
+        parent = Symbol(d[:parent]),
+        factor = d[:factor],
+        timeconst = d[:timeconst]
+    )
+end
 
 function state_transition(Nx::Int, relationships::Vector{StreamRelationship}, streamdict::Dict{Symbol, <:StreamRef})
     #Build the predictor based on relationships, and the noise intensity based off initial state covariance
