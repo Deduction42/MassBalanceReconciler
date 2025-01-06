@@ -105,16 +105,41 @@ function stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
         streams[ii] = stateindex!(indref, stream)
     end
 
-    #Some streams reference the same state but have a scalar (useful for parameterizing splits)
+    #Fill all compositions that are missing (because they refer to another stream)
     streamdict = Dict(stream.id=>stream for stream in streams)
+    for k in keys(streamdict)
+        _fillcomposition!(streamdict, k)
+    end
+
+    #Fill the stream list
     for (ii, stream) in enumerate(streams)
-        if stream.refid != :nothing
-            streams[ii] = @set stream.index = streamdict[stream.refid].index 
+        if hasparent(stream)
+            streams[ii] = streamdict[stream.id]
         end
     end
 
     return indref
 end
+
+#Fill the composition of the stream indexed by "id" (fills in the parent if it's not filled in yet)
+function _fillcomposition!(streamdict::Dict{Symbol, <:StreamRef}, id::Symbol)
+    stream = streamdict[id]
+
+    #If the first index is non-zero, this stream composition is already filled out so just return it
+    if !iszero(first(stream.index)) 
+        return stream
+    end
+
+    #Ensure that the parent stream is already filled out
+    parent = _fillcomposition!(streamdict, stream.refid)
+
+    #Return the stream with the new index
+    newstream = @set stream.index = parent.index 
+    streamdict[id] = newstream
+    
+    return newstream
+end
+
 
 #=============================================================================
 Chemical reactions

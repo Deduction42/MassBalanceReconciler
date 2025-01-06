@@ -230,7 +230,7 @@ push!(measinfo, MeasInfo(
 
 push!(measinfo, MeasInfo(
     id = :injection_analyzer,
-    type  = MassFlowMeas,
+    type  = MoleAnalyzer,
     tags  = Dict(LABELS .=> "injection_analyzer." .* string.(LABELS)),
     stdev = Dict(LABELS .=> 0.01),
     stream = :to_injection
@@ -265,9 +265,13 @@ plantinfo = PlantInfo(
 #==============================================================================================
 Output system to JSON
 ==============================================================================================#
-io = IOBuffer()
-JSON3.pretty(io, plantinfo)
-capture_json = String(take!(io))
-capture_dict = JSON3.read(capture_json)
+open(joinpath(@__DIR__,"capture_plant.json"), "w") do fh
+    JSON3.pretty(fh, plantinfo)
+end
+
+capture_dict = open(joinpath(@__DIR__,"capture_plant.json")) do fh
+    JSON3.read(fh)
+end
+
 reconstructed_plant = PlantInfo(capture_dict)
-#plantstate = PlantState(reconstructed_plant)
+plantstate = PlantState(reconstructed_plant)
