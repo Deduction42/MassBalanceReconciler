@@ -58,7 +58,8 @@ species(x::Species{L}) where L = L
 Base.propertynames(x::Species{L}) where L = L
 
 
-
+#Conversion to dictionary
+Base.Dict(x::Species{L}) where L = Dict(L .=> speciesvec(x))
 
 
 #=============================================================================
