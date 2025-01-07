@@ -276,13 +276,15 @@
     ],
     "measurements": [
         {
-            "id": "emissions_mass_flow",
-            "type": "MassFlowMeas",
+            "id": "emissions_volume_flow",
+            "type": "VolumeFlowMeas",
             "tags": {
-                "m": "emissions_mass_flow"
+                "T": 298.15,
+                "P": 101300,
+                "V": "emissions_volume_flow"
             },
             "stdev": {
-                "m": 0.01
+                "V": 0.01
             },
             "stream": "emissions_source",
             "node": "nothing"

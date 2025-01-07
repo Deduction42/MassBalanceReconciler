@@ -197,10 +197,10 @@ Measurements for the capture system
 measinfo = MeasInfo[]
 
 push!(measinfo, MeasInfo(
-    id = :emissions_mass_flow,
-    type = MassFlowMeas,
-    tags = Dict(:m=>"emissions_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    id = :emissions_volume_flow,
+    type = VolumeFlowMeas,
+    tags = Dict(:V=>"emissions_volume_flow", :T=>(273.15+25), :P=>(101.3e3)),
+    stdev = Dict(:V=>0.01),
     stream = :emissions_source
 ))
 
@@ -270,7 +270,7 @@ open(joinpath(@__DIR__,"capture_plant.json"), "w") do fh
 end
 
 capture_dict = open(joinpath(@__DIR__,"capture_plant.json")) do fh
-    JSON3.read(fh)
+    JSON3.read(fh, numbertype=Float64)
 end
 
 reconstructed_plant = PlantInfo(capture_dict)
