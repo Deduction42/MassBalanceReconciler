@@ -96,28 +96,28 @@ nodeinfo = NodeInfo[]
 
 push!(nodeinfo, NodeInfo(
     id = :capture,
-    stdev   = Dict(LABELS .=> 30.0),
+    stdev   = Dict(LABELS .=> 400.0*900),
     inlets  = [:emissions_source],
     outlets = [:capture_loss, :to_compression]
 ))
 
 push!(nodeinfo, NodeInfo(
     id = :compression,
-    stdev   = Dict(LABELS .=> 30.0),
+    stdev   = Dict(LABELS .=> 400.0*900),
     inlets  = [:to_compression],
     outlets = [:compression_loss, :to_transport] 
 ))
 
 push!(nodeinfo, NodeInfo(
     id = :transport,
-    stdev = Dict(LABELS .=> 30.0),
+    stdev = Dict(LABELS .=> 400.0*900),
     inlets = [:to_transport],
     outlets = [:transport_loss, :to_injection]
 ))
 
 push!(nodeinfo, NodeInfo(
     id = :injection,
-    stdev = Dict(LABELS .=> 30.0),
+    stdev = Dict(LABELS .=> 400.0*900),
     inlets  = [:to_injection],
     outlets = [:injection_loss, :to_storage]
 ))
@@ -265,11 +265,11 @@ plantinfo = PlantInfo(
 #==============================================================================================
 Output system to JSON
 ==============================================================================================#
-open(joinpath(@__DIR__,"capture_plant.json"), "w") do fh
+open(joinpath(@__DIR__,"co2_capture_plant.json"), "w") do fh
     JSON3.pretty(fh, plantinfo)
 end
 
-capture_dict = open(joinpath(@__DIR__,"capture_plant.json")) do fh
+capture_dict = open(joinpath(@__DIR__,"co2_capture_plant.json")) do fh
     JSON3.read(fh, numbertype=Float64)
 end
 
