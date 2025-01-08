@@ -1,4 +1,5 @@
 {
+    "interval": 900,
     "thermo": {
         "labels": [
             "C1",

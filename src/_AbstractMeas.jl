@@ -288,7 +288,7 @@ Mole Balancer
 @kwdef struct MoleBalance{S, T, N} <: AbstractMultiMeas{S, T}
     id        :: Symbol
     value     :: Species{S, T, N}
-    interval  :: Float64
+    interval  :: Base.RefValue{Float64}
     inlets    :: Vector{StreamRef{S, N}}
     outlets   :: Vector{StreamRef{S, N}}
     reactions :: Vector{ReactionRef{S, N}}
@@ -317,14 +317,14 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where
     return balance.*m.interval
 end
 
-function MoleBalance(nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}) where S
+function MoleBalance(nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}, interval::Base.RefValue{Float64}) where S
     nodeid = nodeinfo.id
     N = length(S)
 
     return MoleBalance{S, Float64}(
         id        = nodeid,
         value     = zero(Species{S, Float64, N}),
-        interval  = 0.0,
+        interval  = interval,
         stdev     = Species{S}(nodeinfo.stdev),
         inlets    = [streams[id] for id in nodeinfo.inlets],
         outlets   = [streams[id] for id in nodeinfo.outlets],
@@ -332,14 +332,6 @@ function MoleBalance(nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}) 
     )
 end
 
-function setinterval(m::MoleBalance{S,T}, Δt::Real) where {S,T} 
-    return @set m.interval = T(Δt)
-end
-
-function setintervals!(vm::AbstractVector{<:MoleBalance}, Δt::Real)
-    vm .= setinterval.(vm, Δt)
-    return vm
-end
 
 #=============================================================================
 Collection of all measurements

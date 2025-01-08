@@ -7,9 +7,13 @@ function errorgradient(statevec::AbstractVector, plant::PlantState)
     return Zygote.gradient(x->negloglik(x, plant), statevec)[1]
 end
 
-function reconcile!(plant::PlantState)
+function reconcile!(plant::PlantState, data::AbstractDict{<:String, <:Real})
+    readvalues!(plant, data)
+    updatethermo!(plant)
+    predict!(plant)
     optimresults = reconcile_statevec!(plant)
     statecov = reconcile_statecov!(plant)
+    update_balance_errors!(plant)
     return (optimresults, statecov)
 end
 

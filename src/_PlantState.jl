@@ -1,10 +1,13 @@
 include("_AbstractMeas.jl")
 using LinearAlgebra
+using Dates
+const TIMESTAMP_KEY = "_UNIX_TIMESTAMP"
 
 #=============================================================================
 Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo <: AbstractInfo
+    interval :: Float64
     thermo  :: ThermoInfo
     streams :: Vector{StreamInfo} = StreamInfo[]
     nodes   :: Vector{NodeInfo}   = NodeInfo[]
@@ -14,6 +17,7 @@ end
 
 function PlantInfo(d::AbstractDict{<:Symbol})
     return PlantInfo(
+        interval = d[:interval],
         thermo  = ThermoInfo(d[:thermo]),
         streams = StreamInfo.(d[:streams]),
         nodes   = NodeInfo.(d[:nodes]),
@@ -22,8 +26,14 @@ function PlantInfo(d::AbstractDict{<:Symbol})
     )
 end
 
+@kwdef struct PlantClock
+    timestamp :: Base.RefValue{Float64}
+    interval  :: Base.RefValue{Float64}
+    stepsize  :: Float64
+end
+
 @kwdef struct PlantState{L, N}
-    timestamp    :: Base.RefValue{Float64}
+    clock        :: PlantClock
     thermo       :: ThermoModel{L,N}
     statevec     :: Vector{Float64}
     statecov     :: Matrix{Float64}
@@ -34,8 +44,20 @@ end
 end
 
 function PlantState(plantinfo::PlantInfo)
+
+    #Build the plant clock information
+    stepsize = plantinfo.interval
+    interval = Ref(plantinfo.interval)
+    timestamp = Ref(datetime2unix(floor(now(UTC), Day(1))))
+
+    plantclock = PlantClock(
+        timestamp = timestamp,
+        interval = interval,
+        stepsize = stepsize,
+    )
+
     #Build the initial state index
-    indref  = Ref(0)
+    indref   = Ref(0)
 
     #Retrieve the species vector (the main plant parameter)
     L = Tuple(plantinfo.thermo.labels)
@@ -80,13 +102,13 @@ function PlantState(plantinfo::PlantInfo)
     end
 
     for nodeinfo in plantinfo.nodes
-        meas = MoleBalance(nodeinfo, streamdict)
+        meas = MoleBalance(nodeinfo, streamdict, interval)
         push!(meascollection[MoleBalance], meas)
     end
 
     #Populate the final object with constructed values and pass through the stream and node information
     return PlantState{L,length(L)}(
-        timestamp = Ref(0.0),
+        clock = plantclock,
         thermo = thermo,
         statevec = statevec,
         statecov = statecov,
@@ -96,6 +118,37 @@ function PlantState(plantinfo::PlantInfo)
         nodes = nodes
     )
 end
+
+
+function predict!(plant::PlantState)
+    interval = plant.clock.interval[]
+    Ad = exp(interval.*plant.dpredictor.A)
+    plant.statevec .= Ad*plant.statevec
+    plant.statecov .= Ad'*plant.statecov*Ad + interval.*plant.dpredictor.Q
+    return plant 
+end
+
+function negloglik(x::AbstractVector, plant::PlantState)
+    Δx = x .- plant.statevec
+    state_negloglik = Δx'*plant.statecov*Δx
+    meas_negloglik  = negloglik(x, plant.measurements)
+    return state_negloglik + meas_negloglik
+end
+
+function readvalues!(plant::PlantState, data::AbstractDict{<:AbstractString,<:Real})
+    setclock!(plant, data)
+    readvalues!(plant.measurements, data)
+    return plant
+end
+
+function updatethermo!(plant::PlantState)
+    updatethermo!(plant.measurements, plant.statevec, plant.thermo)
+    return plant 
+end
+
+#==============================================================================================================================
+Fill state vector with stream information defaults
+==============================================================================================================================#
 
 function fillstate!(X::AbstractVector, model::ThermoModel, streamrefs::Vector{<:StreamRef}, streaminfo::Vector{StreamInfo})
     molweights = molar_weights(model)
@@ -156,48 +209,29 @@ function fillstate!(X::AbstractVector, noderef::NodeRef{L}) where L
     return X 
 end
 
+function setclock!(plant::PlantState, data::AbstractDict{<:AbstractString}; nominal_interval=false)
+    timestamp = data[TIMESTAMP_KEY]
 
-function readvalues!(plant::PlantState, d::AbstractDict, t::Real)
-    interval = max(0.0, t - plant.timestamp[])
-    readvalues!(plant.measurements, d)
-    setintervals!(plant.measurements.MoleBalance, interval)
-    return plant
-end
+    if nominal_interval
+        plant.clock.interval[] = plant.clock.stepsize
 
-function updatethermo!(plant::PlantState)
-    updatethermo!(plant.measurements, plant.statevec, plant.thermo)
-    return plant 
-end
+    elseif (timestamp <= plant.clock.timestamp[])
+        @warn "Dataset is later than the current plant state, assuming nominal interval"
+        plant.clock.interval[] = plant.clock.stepsize
 
-#=============================================================================
-Populate the tag dictionary with translated anlyzer values
-=============================================================================#
-#=
-function translate!(tagdict::Dict{String}, measurements::MeasCollection{L}, thermo::Dict{Symbol, <:ThermoState}) where {L}
-    for meas in measurements.MoleAnalyzer
-        molefracs  = totals(Species{L}, thermo[meas.stream.id].n)[:]
-        molefracs  = molefracs./sum(molefracs)
-
-        for ii in eachindex(molefracs)
-            tagdict[meas.tag[ii]] = molefracs[ii]
-        end
+    else
+        plant.clock.interval[] = (timestamp - plant.clock.timestamp[])
     end
-end
-=#
 
-function predict!(plant::PlantState, interval::Real)
-    Ad = exp(interval.*plant.dpredictor.A)
-    plant.statevec .= Ad*plant.statevec
-    plant.statecov .= Ad'*plant.statecov*Ad + interval.*plant.dpredictor.Q
+    plant.clock.timestamp[] = timestamp
     return plant 
 end
 
-function negloglik(x::AbstractVector, plant::PlantState)
-    Δx = x .- plant.statevec
-    state_negloglik = Δx'*plant.statecov*Δx
-    meas_negloglik  = negloglik(x, plant.measurements)
-    return state_negloglik + meas_negloglik
-end
+
+
+
+
+
 
 
 

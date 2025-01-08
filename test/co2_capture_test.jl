@@ -1,6 +1,7 @@
 using Revise
 using MassBalanceReconciler
 using JSON3
+using Dates
 
 #===========================================================================================================
 ToDo:
@@ -31,7 +32,13 @@ end
 plantinfo = PlantInfo(capture_dict)
 plantstate = PlantState(plantinfo)
 
-readvalues!(plantstate, meas_dict, 60*15)
+t0 = datetime2unix(floor(now(), Hour(1)))
+t1 = t0 + plantstate.clock.interval[]
+plantstate.clock.timestamp[] = t0
+meas_dict[MassBalanceReconciler.TIMESTAMP_KEY] = t1
+
+#=
+readvalues!(plantstate, meas_dict)
 updatethermo!(plantstate)
 predict!(plantstate, 60)
 
@@ -39,5 +46,6 @@ P0 = deepcopy(plantstate.statecov)
 @time optimresults = reconcile_statevec!(plantstate)
 P1 = reconcile_statecov!(plantstate)
 update_balance_errors!(plantstate)
-
+=#
+(optimresults, statecov) = reconcile!(plantstate, meas_dict)
 

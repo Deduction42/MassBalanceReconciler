@@ -255,7 +255,8 @@ thermoinfo = ThermoInfo(labels=collect(LABELS), definitions=Dict(clapeyron_pairs
 Assemble entire system
 ==============================================================================================#
 plantinfo = PlantInfo(
-    thermo=thermoinfo,
+    interval = 60.0*15,
+    thermo = thermoinfo,
     streams = streaminfo,
     nodes = nodeinfo,
     measurements = measinfo,
