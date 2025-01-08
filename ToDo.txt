@@ -1,5 +1,10 @@
-============= Current Branch (cleaner model definitions) ==============================
-(1) Build JSON constructors for PlantInfo and components
+============= DEV branch (dynamic reconciliation) =============
+(1) Build code to reconcile entire timeseries
+     -  Save the state and standard deviations as timeseries
+
+(2) Build query functions for the state and stdevs for streams and reconciled measurements
+     -  Use indexers to pull data 
+     -  Produce a tabular JSON (for compact transmission)
 
 
 ============= Next branch (AffineUnits) (removing aggregation) =============
@@ -8,18 +13,6 @@
      - y{°C} = 5/9*x{°F} - 160/9  <=> 1°F = 5/9*°C - 160/9
      - y{K}  = 5/9*x{°F} + 255.37 <=> 1°F = 5/9*K  + 255.37 
 (2) Add "units" to each measurement definition (and the JSON constructors)
-
-
-
-============= Merge to main and reset the DEV branch (dynamic reconciliation) =============
-(1) Build transitional code for multiple evaluations
-     (1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
-          -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
-
-(2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
-     -  Parent application can make any query they desire for this
-
-
 
 
 
