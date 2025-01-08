@@ -58,21 +58,12 @@ species(x::Species{L}) where L = L
 Base.propertynames(x::Species{L}) where L = L
 
 
-#=============================================================================
-Chemical reactions
-=============================================================================#
-struct Reaction{L,T,N}
-    extent :: T
-    stoich :: Species{L,T,N}
-end
-speciesvec(r::Reaction) = r.extent .* r.stoich[:]
-
-Reaction{L,T}(x...) where {L,T} = Reaction{L,T,length(L)}(x...)
-Reaction{L}(extent::T, stoich) where {L,T} = Reaction{L,T,length(L)}(extent, stoich)
+#Conversion to dictionary
+Base.Dict(x::Species{L}) where L = Dict(L .=> speciesvec(x))
 
 
 #=============================================================================
-Interactions with state vectors
+Interactions with abstract vectors
 =============================================================================#
 function Base.getindex(x::AbstractVector{T}, idx::Species{L,<:Integer}) where {L,T}
     return Species{L}(x[idx.data])
@@ -83,36 +74,7 @@ function Base.setindex!(x::AbstractVector{T}, idx::Species{L,<:Integer}, vals::S
     return x 
 end
 
-function Base.getindex(x::AbstractVector{T}, idx::Reaction{L,<:Integer}) where {L,T}
-    return Reaction{L}(x[idx.extent], idx.stoich)
-end
-
-function Base.setindex!(x::AbstractVector{T}, idx::Reaction{L,<:Integer}, val::Reaction{L}) where {L,T}
-    x[idx.extent] = val.extent
-    return x
-end
-
 speciesvec(x::AbstractVector, idx::Species)  = x[idx.data]
-speciesvec(x::AbstractVector, idx::Reaction) = x[idx.extent] .* idx.stoich.data
-
-#=============================================================================
-Stoichometric relationships between Species vectors and reaction coefficients
-=============================================================================#
-
-#Find the extend of reaction based on each reaction coefficient
-#It is based on which species are consumed (negative values means species is consumed)
-#Species that are not consumed have an infinite extent (they don't limit the extent of reaction)
-function stoich_extent(rxn_coeff::T1, input::T2) where {T1<:Real,T2<:Real} 
-    T = promote_type(T1,T2,Float64)
-    return ifelse(rxn_coeff<0, input/abs(rxn_coeff), T(Inf))
-end
-
-"""
-stoich_extent(reaction::AbstractVector, input::AbstractVector)
-
-Finds maximum reaction extent based on stoichiometry and the limiting reagent
-"""
-stoich_extent(reaction::AbstractVector, input::AbstractVector) = mapreduce(stoich_extent, min, reaction, input)
 
 #=============================================================================
 Default methods for total and specific aggregation (only works for same type)

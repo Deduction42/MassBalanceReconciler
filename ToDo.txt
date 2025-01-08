@@ -1,21 +1,29 @@
-Today
-(0) Stress-Test the system with a full composition rather than the abridged GHGs
+============= Current Branch (cleaner model definitions) ==============================
+(1) Build JSON constructors for PlantInfo and components
 
-(1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
-     -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
+
+============= Next branch (AffineUnits) (removing aggregation) =============
+(1) Define AffineUnits extension to DynamicQuantities
+     - Scale/Offset are for the formulas to convert INTO SI units
+     - y{°C} = 5/9*x{°F} - 160/9  <=> 1°F = 5/9*°C - 160/9
+     - y{K}  = 5/9*x{°F} + 255.37 <=> 1°F = 5/9*K  + 255.37 
+(2) Add "units" to each measurement definition (and the JSON constructors)
+
+
+
+============= Merge to main and reset the DEV branch (dynamic reconciliation) =============
+(1) Build transitional code for multiple evaluations
+     (1) Subtract mass balance errors to "MoleBalance" measurements, these must be saved for the next iteration
+          -  0 = err[k] + sum(err[1:(k-1)])  ===>  -sum(err[1:(k-1)]) = err[k]
 
 (2) Use the solved state and StreamInfo indexers to return labelled values of all streams (replace indexes with floats)
      -  Parent application can make any query they desire for this
 
-(3) Retool Measurements to use StreamInfo rather than Species
-     -  StreamInfo can contain refid :: Symbol (default is Symbol("")) which is populated if this stream is a split from another stream
-          - A "scale" parameter will need to be added, which is an integer reference to the state
-     -  Implement a "getindex" function for StreamInfo 
-          - If this is a split, you get the scale as well as the index and multiply together
-     -  stateindex! for StreamInfo will iterate the "index" if not a reference, otherwise will iterate only the "scale"
-     -  This will significantly reduce dimensionality for leaks
 
-(Move GhsSpecies object outside of the package, into parennt environment)
+
+
+
+============= Port to parent "Carbon" application ====================
 (O0) Develop workflow for model construction
      -  Prepare the global indexer ref to be used for all JSONs
      -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)

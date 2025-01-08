@@ -1,0 +1,391 @@
+{
+    "thermo": {
+        "labels": [
+            "C1",
+            "C2",
+            "C3",
+            "iC4",
+            "nC4",
+            "iC5",
+            "nC5",
+            "nC6",
+            "nC7",
+            "nC8",
+            "nC9",
+            "nC10",
+            "N2",
+            "CO2",
+            "O2",
+            "H2O",
+            "CO",
+            "H2S",
+            "H2",
+            "He",
+            "Ar",
+            "N2O"
+        ],
+        "definitions": {
+            "C2": "ethane",
+            "iC5": "isopentane",
+            "nC7": "heptane",
+            "nC10": "decane",
+            "O2": "oxygen",
+            "nC6": "hexane",
+            "C1": "methane",
+            "Ar": "argon",
+            "nC4": "butane",
+            "nC5": "pentane",
+            "nC9": "nonane",
+            "nC8": "octane",
+            "N2O": "nitrous oxide",
+            "H2S": "hydrogen sulfide",
+            "H2": "hydrogen",
+            "CO2": "carbon dioxide",
+            "H2O": "water",
+            "iC4": "isobutane",
+            "CO": "carbon monoxide",
+            "C3": "propane",
+            "N2": "nitrogen",
+            "He": "helium"
+        }
+    },
+    "streams": [
+        {
+            "id": "emissions_source",
+            "massflow": 20,
+            "molefracs": {
+                "C2": 0.0007099999999999999,
+                "iC5": 0,
+                "nC7": 0,
+                "nC10": 0,
+                "O2": 0,
+                "nC6": 0.00073,
+                "C1": 0.0040100000000000005,
+                "Ar": 0,
+                "nC4": 0.0002,
+                "nC5": 0,
+                "nC9": 0,
+                "nC8": 0,
+                "N2O": 0,
+                "H2S": 0.15,
+                "H2": 0,
+                "CO2": 0.84005,
+                "H2O": 0,
+                "iC4": 6.0e-5,
+                "CO": 0,
+                "C3": 0.0010299999999999999,
+                "N2": 0.00321,
+                "He": 0
+            },
+            "phase": "gas"
+        },
+        {
+            "id": "capture_loss",
+            "massflow": 0.02,
+            "molefracs": "emissions_source",
+            "phase": "gas"
+        },
+        {
+            "id": "to_compression",
+            "massflow": 20,
+            "molefracs": "emissions_source",
+            "phase": "gas"
+        },
+        {
+            "id": "compression_loss",
+            "massflow": 0.02,
+            "molefracs": "to_compression",
+            "phase": "gas"
+        },
+        {
+            "id": "to_transport",
+            "massflow": 20,
+            "molefracs": "to_compression",
+            "phase": "gas"
+        },
+        {
+            "id": "transport_loss",
+            "massflow": 0.02,
+            "molefracs": "to_transport",
+            "phase": "gas"
+        },
+        {
+            "id": "to_injection",
+            "massflow": 20,
+            "molefracs": "to_transport",
+            "phase": "gas"
+        },
+        {
+            "id": "injection_loss",
+            "massflow": 0.02,
+            "molefracs": "to_injection",
+            "phase": "gas"
+        },
+        {
+            "id": "to_storage",
+            "massflow": 20,
+            "molefracs": "to_injection",
+            "phase": "gas"
+        }
+    ],
+    "nodes": [
+        {
+            "id": "capture",
+            "stdev": {
+                "C2": 360000,
+                "iC5": 360000,
+                "nC7": 360000,
+                "nC10": 360000,
+                "O2": 360000,
+                "nC6": 360000,
+                "C1": 360000,
+                "Ar": 360000,
+                "nC4": 360000,
+                "nC5": 360000,
+                "nC9": 360000,
+                "nC8": 360000,
+                "N2O": 360000,
+                "H2S": 360000,
+                "H2": 360000,
+                "CO2": 360000,
+                "H2O": 360000,
+                "iC4": 360000,
+                "CO": 360000,
+                "C3": 360000,
+                "N2": 360000,
+                "He": 360000
+            },
+            "inlets": [
+                "emissions_source"
+            ],
+            "outlets": [
+                "capture_loss",
+                "to_compression"
+            ],
+            "reactions": [
+            ]
+        },
+        {
+            "id": "compression",
+            "stdev": {
+                "C2": 360000,
+                "iC5": 360000,
+                "nC7": 360000,
+                "nC10": 360000,
+                "O2": 360000,
+                "nC6": 360000,
+                "C1": 360000,
+                "Ar": 360000,
+                "nC4": 360000,
+                "nC5": 360000,
+                "nC9": 360000,
+                "nC8": 360000,
+                "N2O": 360000,
+                "H2S": 360000,
+                "H2": 360000,
+                "CO2": 360000,
+                "H2O": 360000,
+                "iC4": 360000,
+                "CO": 360000,
+                "C3": 360000,
+                "N2": 360000,
+                "He": 360000
+            },
+            "inlets": [
+                "to_compression"
+            ],
+            "outlets": [
+                "compression_loss",
+                "to_transport"
+            ],
+            "reactions": [
+            ]
+        },
+        {
+            "id": "transport",
+            "stdev": {
+                "C2": 360000,
+                "iC5": 360000,
+                "nC7": 360000,
+                "nC10": 360000,
+                "O2": 360000,
+                "nC6": 360000,
+                "C1": 360000,
+                "Ar": 360000,
+                "nC4": 360000,
+                "nC5": 360000,
+                "nC9": 360000,
+                "nC8": 360000,
+                "N2O": 360000,
+                "H2S": 360000,
+                "H2": 360000,
+                "CO2": 360000,
+                "H2O": 360000,
+                "iC4": 360000,
+                "CO": 360000,
+                "C3": 360000,
+                "N2": 360000,
+                "He": 360000
+            },
+            "inlets": [
+                "to_transport"
+            ],
+            "outlets": [
+                "transport_loss",
+                "to_injection"
+            ],
+            "reactions": [
+            ]
+        },
+        {
+            "id": "injection",
+            "stdev": {
+                "C2": 360000,
+                "iC5": 360000,
+                "nC7": 360000,
+                "nC10": 360000,
+                "O2": 360000,
+                "nC6": 360000,
+                "C1": 360000,
+                "Ar": 360000,
+                "nC4": 360000,
+                "nC5": 360000,
+                "nC9": 360000,
+                "nC8": 360000,
+                "N2O": 360000,
+                "H2S": 360000,
+                "H2": 360000,
+                "CO2": 360000,
+                "H2O": 360000,
+                "iC4": 360000,
+                "CO": 360000,
+                "C3": 360000,
+                "N2": 360000,
+                "He": 360000
+            },
+            "inlets": [
+                "to_injection"
+            ],
+            "outlets": [
+                "injection_loss",
+                "to_storage"
+            ],
+            "reactions": [
+            ]
+        }
+    ],
+    "measurements": [
+        {
+            "id": "emissions_volume_flow",
+            "type": "VolumeFlowMeas",
+            "tags": {
+                "T": 298.15,
+                "P": 101300,
+                "V": "emissions_volume_flow"
+            },
+            "stdev": {
+                "V": 0.01
+            },
+            "stream": "emissions_source",
+            "node": "nothing"
+        },
+        {
+            "id": "compressor_mass_flow",
+            "type": "MassFlowMeas",
+            "tags": {
+                "m": "compressor_mass_flow"
+            },
+            "stdev": {
+                "m": 0.01
+            },
+            "stream": "to_compression",
+            "node": "nothing"
+        },
+        {
+            "id": "transport_mass_flow",
+            "type": "MassFlowMeas",
+            "tags": {
+                "m": "transport_mass_flow"
+            },
+            "stdev": {
+                "m": 0.01
+            },
+            "stream": "to_transport",
+            "node": "nothing"
+        },
+        {
+            "id": "injection_mass_flow",
+            "type": "MassFlowMeas",
+            "tags": {
+                "m": "injection_mass_flow"
+            },
+            "stdev": {
+                "m": 0.01
+            },
+            "stream": "to_injection",
+            "node": "nothing"
+        },
+        {
+            "id": "injection_analyzer",
+            "type": "MoleAnalyzer",
+            "tags": {
+                "C2": "injection_analyzer.C2",
+                "iC5": "injection_analyzer.iC5",
+                "nC7": "injection_analyzer.nC7",
+                "nC10": "injection_analyzer.nC10",
+                "O2": "injection_analyzer.O2",
+                "nC6": "injection_analyzer.nC6",
+                "C1": "injection_analyzer.C1",
+                "Ar": "injection_analyzer.Ar",
+                "nC4": "injection_analyzer.nC4",
+                "nC5": "injection_analyzer.nC5",
+                "nC9": "injection_analyzer.nC9",
+                "nC8": "injection_analyzer.nC8",
+                "N2O": "injection_analyzer.N2O",
+                "H2S": "injection_analyzer.H2S",
+                "H2": "injection_analyzer.H2",
+                "CO2": "injection_analyzer.CO2",
+                "H2O": "injection_analyzer.H2O",
+                "iC4": "injection_analyzer.iC4",
+                "CO": "injection_analyzer.CO",
+                "C3": "injection_analyzer.C3",
+                "N2": "injection_analyzer.N2",
+                "He": "injection_analyzer.He"
+            },
+            "stdev": {
+                "C2": 0.01,
+                "iC5": 0.01,
+                "nC7": 0.01,
+                "nC10": 0.01,
+                "O2": 0.01,
+                "nC6": 0.01,
+                "C1": 0.01,
+                "Ar": 0.01,
+                "nC4": 0.01,
+                "nC5": 0.01,
+                "nC9": 0.01,
+                "nC8": 0.01,
+                "N2O": 0.01,
+                "H2S": 0.01,
+                "H2": 0.01,
+                "CO2": 0.01,
+                "H2O": 0.01,
+                "iC4": 0.01,
+                "CO": 0.01,
+                "C3": 0.01,
+                "N2": 0.01,
+                "He": 0.01
+            },
+            "stream": "to_injection",
+            "node": "nothing"
+        }
+    ],
+    "relationships": [
+        {
+            "id": "injection_loss",
+            "parent": "to_injection",
+            "factor": 0.01,
+            "timeconst": 60
+        }
+    ]
+}

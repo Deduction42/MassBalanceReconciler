@@ -1,0 +1,229 @@
+{
+    "thermo": {
+        "labels":[
+            "methane",
+            "ethane" ,
+            "propane",
+            "i_butane",
+            "n_butane",
+            "i_pentane",
+            "n_pentane",
+            "hexane",
+            "heptane",
+            "octane",
+            "nonane",
+            "decane",
+            "nitrogen",
+            "co2",
+            "oxygen",
+            "h2o",
+            "co",
+            "h2s",
+            "hydrogen",
+            "helium",
+            "argon",
+            "n2o"
+        ],
+        "definitions": {
+            "methane" : "methane",
+            "ethane" : "ethane",
+            "propane" : "propane",
+            "i_butane" : "isobutane",
+            "n_butane" : "butane" ,
+            "i_pentane" : "isopentane",
+            "n_pentane" : "pentane",
+            "hexane" : "hexane",
+            "heptane" : "heptane",
+            "octane" : "octane",
+            "nonane" : "nonane",
+            "decane" : "decane",
+            "nitrogen" : "nitrogen",
+            "co2" : "carbon dioxide",
+            "oxygen" : "oxygen",
+            "h2o" : "water",
+            "co" : "carbon monoxide",
+            "h2s" : "hydrogen sulfide",
+            "hydrogen" : "hydrogen",
+            "helium" : "helium",
+            "argon" : "argon",
+            "n2o" : "nitrous oxide"
+        }
+    },
+
+    "streams":[
+        {
+            "id" : "s1",
+            "massflow" : 20.0,
+            "molefracs" : {
+                "methane" : 0.01,
+                "ethane" : 0.01,
+                "propane" : 0.01,
+                "i_butane" : 0.01,
+                "n_butane" : 0.01 ,
+                "i_pentane" : 0.01,
+                "n_pentane" : 0.01,
+                "hexane" : 0.01,
+                "heptane" : 0.01,
+                "octane" : 0.01,
+                "nonane" : 0.01,
+                "decane" : 0.0,
+                "nitrogen" : 0.2,
+                "co2" : 0.6,
+                "oxygen" : 0.05,
+                "h2o" : 0.05,
+                "co" : 0.01,
+                "h2s" : 0.01,
+                "hydrogen" : 0.0,
+                "helium" : 0.01,
+                "argon" : 0.01,
+                "n2o" : 0.02
+            },
+            "phase" : "gas"
+        },
+        {
+            "id": "s2",
+            "massflow": 10.0,
+            "molefracs" : {
+                "methane" : 0.01,
+                "ethane" : 0.01,
+                "propane" : 0.01,
+                "i_butane" : 0.01,
+                "n_butane" : 0.01 ,
+                "i_pentane" : 0.01,
+                "n_pentane" : 0.01,
+                "hexane" : 0.01,
+                "heptane" : 0.01,
+                "octane" : 0.01,
+                "nonane" : 0.01,
+                "decane" : 0.0,
+                "nitrogen" : 0.2,
+                "co2" : 0.6,
+                "oxygen" : 0.05,
+                "h2o" : 0.05,
+                "co" : 0.01,
+                "h2s" : 0.01,
+                "hydrogen" : 0.0,
+                "helium" : 0.01,
+                "argon" : 0.01,
+                "n2o" : 0.02
+            },
+            "phase": "gas"
+        },
+        {
+            "id" : "s3",
+            "massflow" : 10.0,
+            "molefracs" : "s2",
+            "phase" :"gas"
+        }
+    ],
+
+    "nodes": [
+        {
+            "id" : "v1",
+            "stdev" : {
+                "methane" : 0.1,
+                "ethane" : 0.1,
+                "propane" : 0.1,
+                "i_butane" : 0.1,
+                "n_butane" : 0.1 ,
+                "i_pentane" : 0.1,
+                "n_pentane" : 0.1,
+                "hexane" : 0.1,
+                "heptane" : 0.1,
+                "octane" : 0.1,
+                "nonane" : 0.1,
+                "decane" : 0.1,
+                "nitrogen" : 0.1,
+                "co2" : 0.1,
+                "oxygen" : 0.1,
+                "h2o" : 0.1,
+                "co" : 0.1,
+                "h2s" : 0.1,
+                "hydrogen" : 0.1,
+                "helium" : 0.1,
+                "argon" : 0.1,
+                "n2o" : 0.1
+            },
+            "inlets" : ["s1"],
+            "outlets" : ["s2", "s3"],
+            "reactions" : []
+        }
+    ],
+
+    "measurements":[
+        {
+            "id" : "s1_volume",
+            "type"  : "VolumeFlowMeas",
+            "tags"  : {
+                "V" : "FI-101", 
+                "T" : 373.15, 
+                "P" : 101.3e3
+            },
+            "stdev" : {"V" : 0.01},
+            "stream" : "s1"
+        },
+        {
+            "id" : "s2_mass",
+            "type" : "MassFlowMeas",
+            "tags"  : {"m" : "FI-102"},
+            "stdev" : {"m" : 0.001},
+            "stream" : "s2"
+        },
+        {
+            "id" : "s1_analyzer",
+            "type" : "MoleAnalyzer",
+            "tags" : {
+                "methane" : "AI-101 methane",
+                "ethane" : "AI-101 ethane",
+                "propane" : "AI-101 propane",
+                "i_butane" : "AI-101 i_butane",
+                "n_butane" : "AI-101 n_butane" ,
+                "i_pentane" : "AI-101 i_pentane",
+                "n_pentane" : "AI-101 n_pentane",
+                "hexane" : "AI-101 hexane",
+                "heptane" : "AI-101 heptane",
+                "octane" : "AI-101 octane",
+                "nonane" : "AI-101 nonane",
+                "decane" : "AI-101 decane",
+                "nitrogen" : "AI-101 nitrogen",
+                "co2" : "AI-101 co2",
+                "oxygen" : "AI-101 oxygen",
+                "h2o" : "AI-101 h2o",
+                "co" : "AI-101 co",
+                "h2s" : "AI-101 h2s",
+                "hydrogen" : "AI-101 hydrogen",
+                "helium" : "AI-101 helium",
+                "argon" : "AI-101 argon",
+                "n2o" : "AI-101 n2o"
+            },
+            "stdev" : {
+                "methane" : 0.01,
+                "ethane" : 0.01,
+                "propane" : 0.01,
+                "i_butane" : 0.01,
+                "n_butane" : 0.01 ,
+                "i_pentane" : 0.01,
+                "n_pentane" : 0.01,
+                "hexane" : 0.01,
+                "heptane" : 0.01,
+                "octane" : 0.01,
+                "nonane" : 0.01,
+                "decane" : 0.01,
+                "nitrogen" : 0.01,
+                "co2" : 0.01,
+                "oxygen" : 0.01,
+                "h2o" : 0.01,
+                "co" : 0.01,
+                "h2s" : 0.01,
+                "hydrogen" : 0.01,
+                "helium" : 0.01,
+                "argon" : 0.01,
+                "n2o" : 0.01
+            },
+            "stream" : "s1"
+        }
+    ],
+
+    "relationships": []
+
+}
