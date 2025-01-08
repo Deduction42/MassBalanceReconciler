@@ -1,6 +1,7 @@
 include("_AbstractMeas.jl")
 using LinearAlgebra
 using Dates
+using TimeRecords
 const TIMESTAMP_KEY = "_UNIX_TIMESTAMP"
 
 #=============================================================================
@@ -42,6 +43,15 @@ end
     streams      :: Vector{StreamRef{L,N}}
     nodes        :: Vector{NodeRef{L,N}}
 end
+
+@kwdef struct PlantSeries{L,N}
+    plant  :: PlantState{L,N}
+    states :: TimeSeries{Vector{Float64}}
+    stdevs :: TimeSeries{Vector{Float64}}
+end
+
+PlantSeries(plant::PlantState{L,N}, states, stdevs) where {L,N} = PlantSeries{L,N}(plant, states, stdevs)
+PlantSeries(;kwargs...) = PlantSeries(;kwargs...)
 
 function PlantState(plantinfo::PlantInfo)
 
