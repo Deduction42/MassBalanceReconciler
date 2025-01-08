@@ -3,7 +3,10 @@
      -  Save the state and standard deviations as timeseries
 
 (2) Build query functions for the state and stdevs for streams and reconciled measurements
-     -  Use indexers to pull data 
+     -  build out timeseries querying functions
+           -   define getmeasurement(plant, id), getstream(plant, id), getnode(plant, id)
+           -   these don't need to be performant, we can even iterate through the lists if need be
+           -   stream variances are state standard deviations, others are measurement deviations
      -  Produce a tabular JSON (for compact transmission)
 
 
