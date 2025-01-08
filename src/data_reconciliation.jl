@@ -1,5 +1,6 @@
 include("_PlantState.jl")
-using Optim, LineSearches
+#using Optim, LineSearches
+using Optimization
 import Zygote
 
 function errorgradient(statevec::AbstractVector, plant::PlantState)
@@ -8,34 +9,27 @@ end
 
 function reconcile!(plant::PlantState)
     optimresults = reconcile_statevec!(plant)
-    return optimresults
+    statecov = reconcile_statecov!(plant)
+    return (optimresults, statecov)
 end
 
-
 function reconcile_statevec!(plant::PlantState)
-    objfunc(x::AbstractVector) = negloglik(exp.(x), plant)
+    objfunc = OptimizationFunction(negloglik, AutoZygote())
+    N = length(plant.statevec)
+    lb = fill(1e-12, N)
+    ub = fill(Inf, N)
+    problem = Optimization.OptimizationProblem(objfunc, plant.statevec.*1, plant, lb=lb, ub=ub)
+    results = solve(problem, Optimization.LBFGS(), reltol=1e-9)
 
-    function objgrad!(g::AbstractVector, x::AbstractVector) 
-        g .= Zygote.gradient(objfunc, x)[1]
-        return g
+    if results.objective < negloglik(plant.statevec, plant)
+        plant.statevec .= results.u
     end
-
-    initial = log.(max.(1e-3, plant.statevec))
-
-    # requires using LineSearches
-    inner_optimizer = LBFGS(linesearch=LineSearches.HagerZhang())
-    options = Optim.Options(f_reltol=1e-9, g_tol=0)
-    results = optimize(objfunc, objgrad!, initial, inner_optimizer, options)
-
-    #Overwrite the state if successful
-    if objfunc(results.minimizer) < objfunc(log.(plant.statevec))
-        plant.statevec .= exp.(results.minimizer)
-    end
-
     return results
 end
 
-function reconcile_statecov!(plant)
+
+
+function reconcile_statecov!(plant::PlantState)
     for measvec in plant.measurements[:]
         for meas in measvec
             reconcile_statecov!(plant, meas)
@@ -77,30 +71,18 @@ function observation_matrix(meas::AbstractMeas, xref::AbstractVector)
     return Zygote.jacobian(obsfunc, xref)[1]
 end
 
-#=
-#Older method that uses box constraints
-function reconcile!(plant::PlantState)
-    objfunc(x::AbstractVector) = negloglik(x, plant)
+function update_balance_errors!(plant::PlantState{S}) where S
+    molebalances = plant.measurements.MoleBalance
 
-    function objgrad!(g::AbstractVector, x::AbstractVector) 
-        g .= Zygote.gradient(objfunc, x)[1]
-        return g
+    for ii in eachindex(molebalances)
+        balance = molebalances[ii]
+        updated = (@set balance.value = Species{S}(balance.value .- prediction(plant.statevec, balance)))
+        molebalances[ii] = updated
     end
 
-    lower = fill(zero(Float64), length(plant.statevec))
-    upper = fill(Inf64, length(plant.statevec))
-    initial = max.(1e-9, plant.statevec)
-
-    # requires using LineSearches
-    inner_optimizer = LBFGS(linesearch=LineSearches.HagerZhang())
-    options = Optim.Options(f_reltol=1e-6)
-    results = optimize(objfunc, objgrad!, lower, upper, initial, Fminbox(inner_optimizer), options)
-
-    #Overwrite the state if successful
-    if objfunc(results.minimizer) < objfunc(plant.statevec)
-        plant.statevec .= results.minimizer
-    end
-
-    return results
+    return plant 
 end
-=#
+
+
+
+

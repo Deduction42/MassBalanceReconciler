@@ -1,11 +1,40 @@
 using Accessors
 using LinearAlgebra
-include("_PlantInfo.jl")
+include("_AbstractStreamRef.jl")
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# Make measurements index through StreamRef rather than Species
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+#=============================================================================
+Construction info for measurements
+=============================================================================#
+@kwdef struct MeasInfo 
+    id     :: Symbol
+    type   :: UnionAll
+    tags   :: Dict{Symbol, Union{String,Float64}}
+    stdev  :: Dict{Symbol, Float64}
+    stream :: Symbol = :nothing
+    node   :: Symbol = :nothing
+end
+
+function MeasInfo(d::AbstractDict{Symbol}) 
+    type = eval(Meta.parse(d[:type]))
+    return MeasInfo(
+        id     = Symbol(d[:id]),
+        type   = type,
+        tags   = symbolize(Union{String,Float64}, d[:tags]),
+        stdev  = symbolize(Float64, d[:stdev]),
+        stream = Symbol(get(d, :stream, :nothing)),
+        node   = Symbol(get(d, :node, :nothing))
+    )
+end
+
+MeasInfo(d::AbstractDict{<:AbstractString}) = MeasInfo(symbolize(d))
+
+#=
+function build(info::MeasInfo, streams::Dict{Symbol, StreamRef})
+    return build(info.type, info, streams)
+end
+=#
 
 #=============================================================================
 Abstract Interface ("value" and "stdev" must be fields)
@@ -55,7 +84,7 @@ getvalue(d::Dict, v::AbstractVector) = map(Base.Fix1(getindex, d), v)
 getvalue(d::Dict, v::Species{S}) where S = Species{S}(getvalue(d, v[:]))
 
 readvalue(m::AbstractMeas{S,T}, d::Dict) where {S,T} = setvalue(m, getvalue(d, m.tag))
-updatethermo(m::AbstractMeas, d::Dict{Symbol,<:ThermoState}) = m
+updatethermo(m::AbstractMeas, statevec::AbstractVector{<:Real}, thermo::ThermoModel) = m
 
 function negloglik(x::AbstractVector{T}, m::AbstractVector{<:AbstractMeas}) where T <: Real
     RT = promote_type(T,Float64)
@@ -112,10 +141,13 @@ noisecov(m::AbstractMultiMeas) = Diagonal(m.stdev[:].^2)
 #=============================================================================
 Volumetric flow rates
 =============================================================================#
+const VolState{T} = Species{(:V,:T,:P), T, 3} where T
+VolState(v::AbstractVector{T}) where T = VolState{T}(v)
+
 @kwdef struct VolumeFlowMeas{S, T, N} <: AbstractSingleMeas{S, T}
     id       :: Symbol
-    tag      :: String
-    value    :: T
+    tag      :: VolState{Union{String,Float64}}
+    value    :: VolState{T}
     molarvol :: Species{S, Float64, N}
     stream   :: StreamRef{S, N}
     stdev    :: Float64
@@ -123,30 +155,57 @@ end
 VolumeFlowMeas{S, T}(x...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(x...)
 VolumeFlowMeas{S, T}(;kw...) where {S,T} = VolumeFlowMeas{S, T, length(S)}(;kw...)
 
+function VolumeFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::ThermoModel) where S
+    if length(measinfo.tags) != 3
+        error("Measurement Type: VolumeFlowMeas only supports 3 tags, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
+    end
+    N = length(S)
+    (T, P) = (298.15, 101.3e3)
+    stream = streams[measinfo.stream]
+
+    thermostate = ThermoState{S, Float64}(
+        model=thermo, 
+        T=T, 
+        P=P, 
+        n=Species{S}(ones(N)./N),
+        phase=stream.phase
+    )
+
+    return VolumeFlowMeas{S, Float64}(
+        id       = measinfo.id,
+        tag      = VolState{Union{String,Float64}}(measinfo.tags),
+        value    = VolState{Float64}(V=0.0, T=T, P=P),
+        stdev    = measinfo.stdev[:V],
+        stream   = stream,
+        molarvol = molar_volumes(thermostate)
+    )
+end
+
+function readvalue(m::VolumeFlowMeas{S,T}, d::Dict) where {S,T}
+    _getvalue(v::String) = T(d[v])
+    _getvalue(v::Real)   = T(v)
+
+    return setvalue(m, VolState{T}(_getvalue.(m.tag[:])))
+end
+
 function prediction(x::AbstractVector, m::VolumeFlowMeas)
     stream = speciesvec(x, m.stream)
     return dot(m.molarvol[:], stream)
 end
 
-function build(::Type{<:VolumeFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol, <:ThermoState}) where S
-    if length(measinfo.tags) != 1
-        error("Measurement Type: VolumeFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
-    end
-
-    thermostate = thermo[measinfo.stream]
-    return VolumeFlowMeas{S, Float64}(
-        id       = measinfo.id,
-        tag      = measinfo.tags[1],
-        value    = 0.0,
-        stdev    = measinfo.stdev[1],
-        stream   = streams[measinfo.stream],
-        molarvol = molar_volumes(Species{S}, thermostate)
-    )
+function innovation(x::AbstractVector, m::VolumeFlowMeas)
+    return m.value[1] - prediction(x, m)
 end
 
-function updatethermo(meas::VolumeFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    thermostate = thermo[meas.stream.id]
-    return @set meas.molarvol = molar_volumes(Species{S}, thermostate)
+function updatethermo(meas::VolumeFlowMeas{S}, statevec::AbstractVector{<:Real}, thermo::ThermoModel) where S
+    thermostate = ThermoState(
+        model = thermo, 
+        T = meas.value[:T], 
+        P = meas.value[:P], 
+        n = statevec[meas.stream],
+        phase = meas.stream.phase
+    )
+    return @set meas.molarvol = molar_volumes(thermostate)
 end
 
 #=============================================================================
@@ -168,25 +227,23 @@ function prediction(x::AbstractVector, m::MassFlowMeas)
     return dot(m.molarmass[:], stream[:])
 end
 
-function build(::Type{<:MassFlowMeas}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
+function MassFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::ThermoModel) where S
     if length(measinfo.tags) != 1
         error("Measurement Type: MassFlowMeas only supports 1 tag, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
     
-    thermostate = thermo[measinfo.stream]
     return MassFlowMeas{S, Float64}(
         id        = measinfo.id,
-        tag       = measinfo.tags[1],
+        tag       = first(values(measinfo.tags)),
         value     = 0.0,
-        stdev     = measinfo.stdev[1],
+        stdev     = first(values(measinfo.stdev)),
         stream    = streams[measinfo.stream],
-        molarmass = molar_weights(Species{S}, thermostate)
+        molarmass = molar_weights(thermo)
     )
 end
 
-function updatethermo(meas::MassFlowMeas{S}, thermo::Dict{Symbol, <:ThermoState}) where S
-    thermostate = thermo[meas.stream.id]
-    return @set meas.molarmass = molar_weights(Species{S}, thermostate)
+function updatethermo(meas::MassFlowMeas{S}, statevec::AbstractVector{<:Real}, thermo::ThermoModel) where S
+    return @set meas.molarmass = molar_weights(thermo)
 end
 
 #=============================================================================
@@ -207,7 +264,7 @@ function prediction(x::AbstractVector, m::MoleAnalyzer)
     return stream./sum(stream)
 end
 
-function build(::Type{<:MoleAnalyzer}, measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::Dict{Symbol,<:ThermoState}) where S
+function MoleAnalyzer(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}}, thermo::ThermoModel) where S
     measid = measinfo.id
     N = length(S)
 
@@ -260,7 +317,7 @@ function prediction(x::AbstractVector{T}, m::MoleBalance{S, <:Float64, N}) where
     return balance.*m.interval
 end
 
-function build(::Type{<:MoleBalance}, nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}) where S
+function MoleBalance(nodeinfo::NodeInfo, streams::Dict{Symbol, <:StreamRef{S}}) where S
     nodeid = nodeinfo.id
     N = length(S)
 
@@ -304,6 +361,11 @@ Base.getindex(m::MeasCollection, ::Type{T}) where T = getproperty(m, Symbol(T))
 Base.getindex(m::MeasCollection, k::AbstractVector) = map(Base.Fix1(getindex, m), k)
 Base.getindex(m::MeasCollection, k::Tuple) = map(Base.Fix1(getindex, m), k)
 
+function populate!(m::MeasCollection, info::MeasInfo, streams::Dict{Symbol, StreamRef})
+    type = info.type
+    return push!(m[type], type(info, streams))
+end
+
 function readvalues!(vmeas::AbstractVector{M}, d::Dict) where {M <: AbstractMeas}
     reader = Base.Fix2(readvalue, d)
     if hasfield(M, :tag)
@@ -319,15 +381,15 @@ function readvalues!(c::MeasCollection, d::Dict)
     return c
 end
 
-function updatethermo!(vmeas::AbstractVector{M}, d::Dict{Symbol, <:ThermoState}) where {M <: AbstractMeas}
-    updater = Base.Fix2(updatethermo, d)
+function updatethermo!(vmeas::AbstractVector{M}, statevec::AbstractVector{<:Real}, thermo::ThermoModel) where {M <: AbstractMeas}
+    updater(m) = updatethermo(m, statevec, thermo)
     vmeas .= updater.(vmeas)
     return vmeas
 end
 
-function updatethermo!(c::MeasCollection, d::Dict{Symbol, <:ThermoState})
+function updatethermo!(c::MeasCollection, statevec::AbstractVector{<:Real}, thermo::ThermoModel)
     for fn in fieldnames(MeasCollection)
-        updatethermo!(c[fn], d)
+        updatethermo!(c[fn], statevec, thermo)
     end
     return c
 end
