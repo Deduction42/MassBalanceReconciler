@@ -29,11 +29,7 @@ function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) whe
     return PlantSeries(plant, states, stdevs)
 end
 
-#=
-function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=0) where T
-    return integrate(ts, Δt, indhint, order=order)/diff(Δt)
-end
-=#
+
 
 function time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
     #Create a vector of sampled timestamps
