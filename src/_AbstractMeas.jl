@@ -389,3 +389,44 @@ end
 function negloglik(x::AbstractVector, c::MeasCollection)
     return sum(fn-> negloglik(x, c[fn]), fieldnames(MeasCollection))
 end
+
+gettags(c::MeasCollection) = gettags!(String[], c)
+
+function gettags!(tags::AbstractVector{String}, c::MeasCollection)
+    for fn in fieldnames(MeasCollection)
+        gettags!(tags, c[fn])
+    end
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, vm::AbstractVector{<:AbstractMeas})
+    for m in vm
+        gettags!(tags, m)
+    end
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::AbstractSingleMeas)
+    push!(tags, m.tag)
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::AbstractMultiMeas)
+    for tag in m.tag
+        push!(tags, tag)
+    end
+    return tags
+end
+
+gettags!(tags::AbstractVector{<:AbstractString}, m::MoleBalance) = tags
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::VolumeFlowMeas)
+    addtag!(tags::AbstractVector, tag::AbstractString) = push!(tags, tag)
+    addtag!(tags::AbstractVector, tag::Real) = tags
+
+    for tag in m.tag[]
+        addtag!(tags, tag)
+    end
+
+    return tags
+end

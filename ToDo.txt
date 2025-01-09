@@ -1,7 +1,10 @@
 ============= DEV branch (dynamic reconciliation) =============
-(1) Build code to reconcile entire timeseries
-     -  Save the state and standard deviations as timeseries
-
+(1)  Build code to reconcile entire timeseries
+      -   Save the state and standard deviations as timeseries
+     Update TimeSeries library
+      -   Add averages over a single time interval (with indhint)
+      -   Add "indhint" as a keyword definition to the highest level interpolation function 
+      
 (2) Build query functions for the state and stdevs for streams and reconciled measurements
      -  build out timeseries querying functions
            -   define getmeasurement(plant, id), getstream(plant, id), getnode(plant, id)
@@ -11,11 +14,14 @@
 
 
 ============= Next branch (AffineUnits) (removing aggregation) =============
-(1) Define AffineUnits extension to DynamicQuantities
+(1)  Define AffineUnits extension to DynamicQuantities
      - Scale/Offset are for the formulas to convert INTO SI units
      - y{°C} = 5/9*x{°F} - 160/9  <=> 1°F = 5/9*°C - 160/9
      - y{K}  = 5/9*x{°F} + 255.37 <=> 1°F = 5/9*K  + 255.37 
-(2) Add "units" to each measurement definition (and the JSON constructors)
+(2)  Add "units" to each measurement definition (and the JSON constructors)
+      -   Internal predictions use SI units (so that conversions don't happen on every iteration)
+           -   Standard deviations must be scaled to SI units on construction
+      -   Add predict_raw(state, meas) which converts to the original units
 
 
 

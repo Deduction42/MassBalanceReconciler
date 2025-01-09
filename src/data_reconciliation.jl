@@ -7,6 +7,63 @@ function errorgradient(statevec::AbstractVector, plant::PlantState)
     return Zygote.gradient(x->negloglik(x, plant), statevec)[1]
 end
 
+
+function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
+    #Average the data over the intervals
+    #!!!! May want to convert data to SI units here
+    data_avg = time_averages(data, ts)
+    vt = timestamps(first(data_avg))
+
+    #Initialize the samples and states
+    samples = Dict{String,Float64}()
+    states = TimeSeries([TimeRecord(t0, deepcopy(plant.statevec))])
+    stdevs = TimeSeries([TimeRecord(t0, sqrt.(diag(plant.statecov)))])
+
+    for t in vt
+        interpolate!(samples, data_avg, t)
+        reconcile!(plant, samples)
+        push!(states, TimeRecord(t, deepcopy(plant.statevec)))
+        push!(stdevs, TimeRecord(t, sqrt.(diag(plant.statecov))))
+    end
+
+    return PlantSeries(plant, states, stdevs)
+end
+
+#=
+function average(ts::AbstractTimeSeries{T}, Δt::TimeInterval, indhint=nothing; order=0) where T
+    return integrate(ts, Δt, indhint, order=order)/diff(Δt)
+end
+=#
+
+function time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
+    #Create a vector of sampled timestamps
+    Δt = Second(round(plant.clock.interval[]))
+    t0 = floor(minimum(x->datetime(x[begin]), values(data_avg)), Δt)
+    tN = ceil(maximum(x->datetime(x[end]), values(data_avg)), Δt)
+    vt = t0:Δt:tN
+
+    #Obtain tags and initialize the averages
+    tags = gettags(plant.measurements)
+    data_avg = Dict{String, TimeSeries{promote_type(T,Float64)}}()
+
+    for k in tags
+        data_avg[k] = average(data[k], vt)
+    end
+
+    return data_avg
+end
+
+function interpolate!(samples::AbstractDict{K, <:Real}, data::AbstractDict{K, TimeSeries{T}}, t::Real) where {K,T<:Real}
+    f = TimeRecords._interpolate_linsat
+    indhint = max(findbounds(ts, t)[1], 1)
+    for k in keys(data)
+        samples[k] = interpolate(f, data[k], t, indhint)
+    end
+    samples[TIMESTAMP_KEY] = t 
+    return samples
+end
+
+
 function reconcile!(plant::PlantState, data::AbstractDict{<:String, <:Real})
     readvalues!(plant, data)
     updatethermo!(plant)
