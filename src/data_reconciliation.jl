@@ -10,8 +10,7 @@ end
 
 function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
     #Average the data over the intervals
-    #!!!! May want to convert data to SI units here
-    data_avg = time_averages(data, ts)
+    data_avg = si_time_averages(plant, data)
     vt = timestamps(first(data_avg))
 
     #Initialize the samples and states
@@ -31,7 +30,7 @@ end
 
 
 
-function time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
+function si_time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
     #Create a vector of sampled timestamps
     Δt = Second(round(plant.clock.interval[]))
     t0 = floor(minimum(x->datetime(x[begin]), values(data_avg)), Δt)
@@ -42,12 +41,18 @@ function time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSerie
     tags = gettags(plant.measurements)
     data_avg = Dict{String, TimeSeries{promote_type(T,Float64)}}()
 
-    for k in tags
-        data_avg[k] = average(data[k], vt)
+    for k in tags #Calculate the averages and convert to SI units
+        vec_avg  = average(data[k], vt)
+        vec_avg .= to_si_units.(values(vec_avg), plant.units[k])
+        data_avg[k] = vec_avg
     end
 
     return data_avg
 end
+
+#!!! These functions NEED TESTING
+to_si_units(x::Real, u::Quantity)   = ustrip(uexpand(x*u))
+from_si_units(x::Real, u::Quantity) = ustrip(convert(u, x*Quantity(1, dimension(uexpand(u)))))
 
 function interpolate!(samples::AbstractDict{K, <:Real}, data::AbstractDict{K, TimeSeries{T}}, t::Real) where {K,T<:Real}
     f = TimeRecords._interpolate_linsat

@@ -1,10 +1,17 @@
-============= DEV branch (dynamic reconciliation) =============
-(1)  Build code to reconcile entire timeseries
-      -   Save the state and standard deviations as timeseries
-     Update TimeSeries library
-      -   Add averages over a single time interval (with indhint)
-      -   Add "indhint" as a keyword definition to the highest level interpolation function 
-      
+============= Next branch (AffineUnits) (removing aggregation) =============
+(1)  Add a "units" field to the plant object
+      -   units.tags is a dictionary that contains the units of all tags
+          -   This is done here and not at the "measurement" level so that repeated tags don't result in "shotgun surgery"
+          -   This also gives opportunity to check measurement tags against a master registry and give informative error messages
+      -   units.registry defines any extra units this model would need to register
+(2)  Constants in the measurement definition (such as standard conditions for volume) need to be strings that can be parsed as quantities or tags
+      -   Attempt to look up the tag first in the unit registry
+      -   If that fails, attempt to parse the string as a quantity "101.3 kPa" and convert to SI units
+      -   If that fails, raise an error that the string value is not a tag and can't be parsed as a unit
+(3)  Standard deviations for measuremnt definition must also be strings that are parsed as quantities
+(4)  Test this with timeseries data
+
+============= DEV branch (Query results) =============
 (2) Build query functions for the state and stdevs for streams and reconciled measurements
      -  build out timeseries querying functions
            -   define getmeasurement(plant, id), getstream(plant, id), getnode(plant, id)
@@ -13,15 +20,6 @@
      -  Produce a tabular JSON (for compact transmission)
 
 
-============= Next branch (AffineUnits) (removing aggregation) =============
-(1)  Define AffineUnits extension to DynamicQuantities
-     - Scale/Offset are for the formulas to convert INTO SI units
-     - y{°C} = 5/9*x{°F} - 160/9  <=> 1°F = 5/9*°C - 160/9
-     - y{K}  = 5/9*x{°F} + 255.37 <=> 1°F = 5/9*K  + 255.37 
-(2)  Add "units" to each measurement definition (and the JSON constructors)
-      -   Internal predictions use SI units (so that conversions don't happen on every iteration)
-           -   Standard deviations must be scaled to SI units on construction
-      -   Add predict_raw(state, meas) which converts to the original units
 
 
 
