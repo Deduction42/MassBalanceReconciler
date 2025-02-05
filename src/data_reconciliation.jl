@@ -50,9 +50,8 @@ function si_time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSe
     return data_avg
 end
 
-#!!! These functions NEED TESTING
 to_si_units(x::Real, u::Quantity)   = ustrip(uexpand(x*u))
-from_si_units(x::Real, u::Quantity) = ustrip(convert(u, x*Quantity(1, dimension(uexpand(u)))))
+from_si_units(x::Real, u::Quantity) = ustrip(uconvert(u, x*Quantity(1, dimension(uexpand(u)))))
 
 function interpolate!(samples::AbstractDict{K, <:Real}, data::AbstractDict{K, TimeSeries{T}}, t::Real) where {K,T<:Real}
     f = TimeRecords._interpolate_linsat

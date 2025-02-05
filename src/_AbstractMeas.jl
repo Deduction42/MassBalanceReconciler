@@ -1,7 +1,26 @@
 using Accessors
 using LinearAlgebra
+using DynamicQuantities
+
 include("_AbstractStreamRef.jl")
 
+#Settings for default quantities
+const MeasQuantity = Quantity{Float64, SymbolicDimensions{DynamicQuantities.DEFAULT_DIM_BASE_TYPE}}
+parse_units(x::AbstractString) = sym_uparse(x)
+
+@kwdef struct TagInfo
+    tag   :: String
+    units :: MeasQuantity
+    stdev :: Float64
+end
+
+function TagInfo(d::AbstractDict{Symbol})
+    return TagInfo(
+        tag   = d[:tag],
+        units = parse_units(d[:units]),
+        stdev = d[:stdev]
+    )
+end
 
 
 #=============================================================================
@@ -11,7 +30,7 @@ Construction info for measurements
     id     :: Symbol
     type   :: UnionAll
     tags   :: Dict{Symbol, Union{String,Float64}}
-    stdev  :: Dict{Symbol, Float64}
+    stdev  :: Dict{Symbol, Float64} = Dict{Symbol, Float64}()
     stream :: Symbol = :nothing
     node   :: Symbol = :nothing
 end
@@ -22,13 +41,23 @@ function MeasInfo(d::AbstractDict{Symbol})
         id     = Symbol(d[:id]),
         type   = type,
         tags   = symbolize(Union{String,Float64}, d[:tags]),
-        stdev  = symbolize(Float64, d[:stdev]),
         stream = Symbol(get(d, :stream, :nothing)),
         node   = Symbol(get(d, :node, :nothing))
     )
 end
 
 MeasInfo(d::AbstractDict{<:AbstractString}) = MeasInfo(symbolize(d))
+
+#Fills out measurement standard deviation (in SI units) from a TagInfo dict
+function update_std!(measinfo::MeasInfo, taginfos::Dict{String, TagInfo})
+    for (k,v) in pairs(measinfo.tags)
+        if v isa AbstractString
+            taginfo = taginfos[k]
+            measinfo.std[k] = ustrip(uexpand(taginfos.stdev*taginfos.units))
+        end
+    end
+    return measinfo 
+end
 
 #=
 function build(info::MeasInfo, streams::Dict{Symbol, StreamRef})
