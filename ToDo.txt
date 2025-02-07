@@ -1,23 +1,23 @@
-============= Next branch (AffineUnits) (removing aggregation) =============
-(1)  Add a "units" field to the plant object
-      -   units.tags is a dictionary that contains the units of all tags
-          -   This is done here and not at the "measurement" level so that repeated tags don't result in "shotgun surgery"
-          -   This also gives opportunity to check measurement tags against a master registry and give informative error messages
-      -   units.registry defines any extra units this model would need to register
+============= Dev Next branch (AffineUnits) =============
+(1)  Build out and test new tag registry
+      -   Vector of TagInfo objects (done)
+      -   Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
 (2)  Constants in the measurement definition (such as standard conditions for volume) need to be strings that can be parsed as quantities or tags
       -   Attempt to look up the tag first in the unit registry
-      -   If that fails, attempt to parse the string as a quantity "101.3 kPa" and convert to SI units
+      -   If that fails, attempt to parse the string as a quantity "101.3 kPa" and convert to SI units (new parser allows for spaces)
       -   If that fails, raise an error that the string value is not a tag and can't be parsed as a unit
-(3)  Standard deviations for measuremnt definition must also be strings that are parsed as quantities
-(4)  Test this with timeseries data
+(3)  Test JSON builder with new setup (for both JSON dumps and reads)
+
 
 ============= DEV branch (Query results) =============
-(2) Build query functions for the state and stdevs for streams and reconciled measurements
+(1) Build query functions for PlantState and PlantSeries (values and stdevs) for main states (stream components, reactions etc)
      -  build out timeseries querying functions
-           -   define getmeasurement(plant, id), getstream(plant, id), getnode(plant, id)
+           -   define getmeasurement(plant, measid), getstream(plant, streamid, component), getnode(plant, nodeid, component)
            -   these don't need to be performant, we can even iterate through the lists if need be
            -   stream variances are state standard deviations, others are measurement deviations
-     -  Produce a tabular JSON (for compact transmission)
+     -  produce a timeseries
+           -   may want to extend TimeRecord for numerical operations like +-*/ and various univariate functions
+           -   see what is implemented in https://github.com/JuliaLang/julia/blob/master/base/complex.jl
 
 
 

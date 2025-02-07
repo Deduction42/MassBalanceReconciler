@@ -6,7 +6,7 @@ include("_AbstractStreamRef.jl")
 
 #Settings for default quantities
 const MeasQuantity = Quantity{Float64, SymbolicDimensions{DynamicQuantities.DEFAULT_DIM_BASE_TYPE}}
-parse_units(x::AbstractString) = sym_uparse(x)
+parse_units(x::AbstractString) = sym_uparse(replace(x," "=>"")) #Removes whitespace and calls the parser
 
 @kwdef struct TagInfo
     tag   :: String
