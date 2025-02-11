@@ -1,5 +1,6 @@
 using MassBalanceReconciler
 using JSON3
+using DynamicQuantities
 
 #==============================================================================================
 High-level preamble (species, conecntrations etc)
@@ -194,13 +195,47 @@ push!(streaminfo, StreamInfo(
 #==============================================================================================
 Measurements for the capture system
 ==============================================================================================#
+taginfo  = TagInfo[]
+
+push!(taginfo, TagInfo(
+    tag   = "emissions_volume_flow",
+    units = us"m^3/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "compressor_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "transport_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "injection_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+for lbl in LABELS
+    push!(taginfo, TagInfo(
+        tag   = "injection_analyzer."*string(lbl),
+        units = Quantity(1.0, SymbolicDimensions()),
+        stdev = 0.01
+    ))
+end
+
 measinfo = MeasInfo[]
 
 push!(measinfo, MeasInfo(
     id = :emissions_volume_flow,
     type = VolumeFlowMeas,
-    tags = Dict(:V=>"emissions_volume_flow", :T=>(273.15+25), :P=>(101.3e3)),
-    stdev = Dict(:V=>0.01),
+    tags  = Dict(:V=>"emissions_volume_flow", :T=>convert(MeasQuantity, (273.15+25)u"K"), :P=>convert(MeasQuantity, (101.3e3)u"Pa")),
+    #stdev = Dict(:V=>0.01),
     stream = :emissions_source
 ))
 
@@ -208,7 +243,7 @@ push!(measinfo, MeasInfo(
     id = :compressor_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"compressor_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_compression
 ))
 
@@ -216,7 +251,7 @@ push!(measinfo, MeasInfo(
     id = :transport_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"transport_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_transport
 ))
 
@@ -224,7 +259,7 @@ push!(measinfo, MeasInfo(
     id = :injection_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"injection_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_injection
 ))
 
@@ -232,7 +267,7 @@ push!(measinfo, MeasInfo(
     id = :injection_analyzer,
     type  = MoleAnalyzer,
     tags  = Dict(LABELS .=> "injection_analyzer." .* string.(LABELS)),
-    stdev = Dict(LABELS .=> 0.01),
+    #stdev = Dict(LABELS .=> 0.01),
     stream = :to_injection
 ))
 

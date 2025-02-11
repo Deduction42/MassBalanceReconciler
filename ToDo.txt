@@ -7,6 +7,10 @@
       -   If that fails, attempt to parse the string as a quantity "101.3 kPa" and convert to SI units (new parser allows for spaces)
       -   If that fails, raise an error that the string value is not a tag and can't be parsed as a unit
 (3)  Test JSON builder with new setup (for both JSON dumps and reads)
+      -   MeasQuantity will need to be set as a "StringType" (https://quinnj.github.io/JSON3.jl/stable/#StructTypes.StringType)
+      -   DynamicQuantities CANNOT PARSE THEIR OWN OUTPUT
+           -   To do this, you will need to override the "Base.string" function to produce a parseable output
+           -   This is likely best reserved for AffineDimensions, and you only need to do it for "co2_capture_builder.jl"
 
 
 ============= DEV branch (Query results) =============

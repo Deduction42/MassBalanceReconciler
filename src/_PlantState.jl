@@ -53,7 +53,6 @@ end
 end
 
 PlantSeries(plant::PlantState{L,N}, states, stdevs) where {L,N} = PlantSeries{L,N}(plant, states, stdevs)
-PlantSeries(;kwargs...) = PlantSeries(;kwargs...)
 
 function PlantState(plantinfo::PlantInfo)
 

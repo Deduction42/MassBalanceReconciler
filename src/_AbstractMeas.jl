@@ -4,9 +4,7 @@ using DynamicQuantities
 
 include("_AbstractStreamRef.jl")
 
-#Settings for default quantities
-const MeasQuantity = Quantity{Float64, SymbolicDimensions{DynamicQuantities.DEFAULT_DIM_BASE_TYPE}}
-parse_units(x::AbstractString) = sym_uparse(replace(x," "=>"")) #Removes whitespace and calls the parser
+
 
 @kwdef struct TagInfo
     tag   :: String
@@ -29,7 +27,7 @@ Construction info for measurements
 @kwdef struct MeasInfo 
     id     :: Symbol
     type   :: UnionAll
-    tags   :: Dict{Symbol, Union{String,Float64}}
+    tags   :: Dict{Symbol, Union{String, MeasQuantity}}
     stdev  :: Dict{Symbol, Float64} = Dict{Symbol, Float64}()
     stream :: Symbol = :nothing
     node   :: Symbol = :nothing
@@ -40,7 +38,7 @@ function MeasInfo(d::AbstractDict{Symbol})
     return MeasInfo(
         id     = Symbol(d[:id]),
         type   = type,
-        tags   = symbolize(Union{String,Float64}, d[:tags]),
+        tags   = symbolize(Union{String, MeasQuantity}, d[:tags]),
         stream = Symbol(get(d, :stream, :nothing)),
         node   = Symbol(get(d, :node, :nothing))
     )
@@ -53,7 +51,7 @@ function update_std!(measinfo::MeasInfo, taginfos::Dict{String, TagInfo})
     for (k,v) in pairs(measinfo.tags)
         if v isa AbstractString
             taginfo = taginfos[k]
-            measinfo.std[k] = ustrip(uexpand(taginfos.stdev*taginfos.units))
+            measinfo.std[k] = ustrip(uexpand(taginfo.stdev*taginfo.units))
         end
     end
     return measinfo 
@@ -189,8 +187,14 @@ function VolumeFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}
         error("Measurement Type: VolumeFlowMeas only supports 3 tags, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
     N = length(S)
-    (T, P) = (298.15, 101.3e3)
     stream = streams[measinfo.stream]
+    Tref = measinfo.tags[:T]
+    Pref = measinfo.tags[:P]
+
+    #Assign default (SI) values to T,P if they are quantities, if they are tags, they will be overwritten
+    T = (Tref isa Quantity) ? Float64(ustrip(Tref|>us"K"))  : 298.15
+    P = (Pref isa Quantity) ? Float64(ustrip(Pref|>us"Pa")) : 101.3e3
+    
 
     thermostate = ThermoState{S, Float64}(
         model=thermo, 
