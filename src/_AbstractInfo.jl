@@ -9,8 +9,8 @@ abstract type AbstractInfo end
 const MeasQuantity = Quantity{Float64, SymbolicDimensions{DynamicQuantities.DEFAULT_DIM_BASE_TYPE}}
 MeasQuantity(x::String) = parse_units(x)
 
-function parse_units(x::AbstractString)
-    ustr = strip(x)
+function parse_units(x::AbstractString) :: MeasQuantity
+    ustr = replace(strip(x), r"\s"=>"") #Remove whitespace for parsing (space after number causes issues)
     if isempty(ustr)
         return sym_uparse("1.0") #No units will return a dimensionless 1.0
     else
