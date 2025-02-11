@@ -10,7 +10,7 @@ const MeasQuantity = Quantity{Float64, SymbolicDimensions{DynamicQuantities.DEFA
 MeasQuantity(x::String) = parse_units(x)
 
 function parse_units(x::AbstractString)
-    ustr = replace(strip(x), r"\s*"=>"*") #Replaces whitespace with times operator "*"
+    ustr = strip(x)
     if isempty(ustr)
         return sym_uparse("1.0") #No units will return a dimensionless 1.0
     else

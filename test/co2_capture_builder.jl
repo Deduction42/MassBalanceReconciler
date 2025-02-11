@@ -1,12 +1,32 @@
 using MassBalanceReconciler
+
 using JSON3
+import JSON3.StructTypes
+
 using DynamicQuantities
+import DynamicQuantities.dimension_name
 
 #==============================================================================================
 High-level preamble (species, conecntrations etc)
 ==============================================================================================#
 default_massflow = 20.0
 
+Base.string(q::Quantity{T,D}) where {T<:Number, D<:Dimensions} = "$(ustrip(q))"*string(dimension(q))
+Base.string(q::Quantity{T, D} where {T<:Number, D<:SymbolicDimensions}) = string(uexpand(q))
+
+function Base.string(d::Dimensions) 
+    tmp_io = IOBuffer()
+    for k in filter(k -> !iszero(d[k]), keys(d))
+        print(tmp_io, dimension_name(d, k))
+        isone(d[k]) || print(tmp_io, "^($(d[k]))")
+        print(tmp_io, "*")
+    end
+    s = String(take!(tmp_io))
+    s = replace(s, r"\**$" => "")
+    return s
+end
+
+StructTypes.StructType(::Type{MeasQuantity}) = StructTypes.StringType()
 
 clapeyron_pairs = [
     :C1   => "methane",
@@ -291,6 +311,7 @@ Assemble entire system
 ==============================================================================================#
 plantinfo = PlantInfo(
     interval = 60.0*15,
+    tags   = taginfo,
     thermo = thermoinfo,
     streams = streaminfo,
     nodes = nodeinfo,

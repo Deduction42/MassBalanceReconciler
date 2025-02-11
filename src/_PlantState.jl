@@ -20,6 +20,7 @@ end
 function PlantInfo(d::AbstractDict{<:Symbol})
     return PlantInfo(
         interval = d[:interval],
+        tags    = TagInfo.(d[:tags]),
         thermo  = ThermoInfo(d[:thermo]),
         streams = StreamInfo.(d[:streams]),
         nodes   = NodeInfo.(d[:nodes]),
