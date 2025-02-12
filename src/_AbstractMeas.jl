@@ -38,7 +38,7 @@ function MeasInfo(d::AbstractDict{Symbol})
     return MeasInfo(
         id     = Symbol(d[:id]),
         type   = type,
-        tags   = symbolize(Union{String, MeasQuantity}, d[:tags]),
+        tags   = Dict{Symbol, Union{String, MeasQuantity}}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(d[:tags])),
         stream = Symbol(get(d, :stream, :nothing)),
         node   = Symbol(get(d, :node, :nothing))
     )
@@ -48,10 +48,12 @@ MeasInfo(d::AbstractDict{<:AbstractString}) = MeasInfo(symbolize(d))
 
 #Fills out measurement standard deviation (in SI units) from a TagInfo dict
 function update_std!(measinfo::MeasInfo, taginfos::Dict{String, TagInfo})
-    for (k,v) in pairs(measinfo.tags)
+    for (k, v) in pairs(measinfo.tags)
         if v isa AbstractString
-            taginfo = taginfos[k]
-            measinfo.std[k] = ustrip(uexpand(taginfo.stdev*taginfo.units))
+            taginfo = get(taginfos, v) do 
+                throw(ErrorException("Tag registry does not contain '$(v)': ensure it is either a valid tag or can be parsed with 'parse_units(::String)'"))
+            end
+            measinfo.stdev[k] = ustrip(uexpand(taginfo.stdev*taginfo.units))
         end
     end
     return measinfo 
@@ -192,22 +194,26 @@ function VolumeFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}
     Pref = measinfo.tags[:P]
 
     #Assign default (SI) values to T,P if they are quantities, if they are tags, they will be overwritten
-    T = (Tref isa Quantity) ? Float64(ustrip(Tref|>us"K"))  : 298.15
-    P = (Pref isa Quantity) ? Float64(ustrip(Pref|>us"Pa")) : 101.3e3
+    Tval = (Tref isa Quantity) ? Float64(ustrip(Tref|>us"K"))  : 298.15
+    Pval = (Pref isa Quantity) ? Float64(ustrip(Pref|>us"Pa")) : 101.3e3
     
 
     thermostate = ThermoState{S, Float64}(
         model=thermo, 
-        T=T, 
-        P=P, 
+        T=Tval, 
+        P=Pval, 
         n=Species{S}(ones(N)./N),
         phase=stream.phase
     )
 
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
-        tag      = VolState{Union{String,Float64}}(measinfo.tags),
-        value    = VolState{Float64}(V=0.0, T=T, P=P),
+        tag      = VolState{Union{String,Float64}}(
+                      V = measinfo.tags[:V], 
+                      T = (Tref isa AbstractString) ? Tref : Tval,
+                      P = (Pref isa AbstractString) ? Pref : Pval
+                   ),
+        value    = VolState{Float64}(V=0.0, T=Tval, P=Pval),
         stdev    = measinfo.stdev[:V],
         stream   = stream,
         molarvol = molar_volumes(thermostate)

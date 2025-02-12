@@ -13,7 +13,7 @@ meas_dict = open(joinpath(@__DIR__,"co2_capture_meas.json")) do fh
     Dict{String,Float64}(String(k)=>v for (k,v) in pairs(meas_json))
 end
 
-plantinfo = PlantInfo(capture_dict)
+plantinfo  = PlantInfo(capture_dict)
 plantstate = PlantState(plantinfo)
 
 t0 = datetime2unix(floor(now(), Hour(1)))
@@ -31,5 +31,5 @@ P0 = deepcopy(plantstate.statecov)
 P1 = reconcile_statecov!(plantstate)
 update_balance_errors!(plantstate)
 =#
-(optimresults, statecov) = reconcile!(plantstate, meas_dict)
+@profview (optimresults, statecov) = reconcile!(plantstate, meas_dict)
 

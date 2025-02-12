@@ -412,11 +412,9 @@
             "id": "emissions_volume_flow",
             "type": "VolumeFlowMeas",
             "tags": {
-                "T": "298.15K",
-                "P": "101300.0m^(-1)*kg*s^(-2)",
+                "T": "298.15 K",
+                "P": "101300.0 Pa",
                 "V": "emissions_volume_flow"
-            },
-            "stdev": {
             },
             "stream": "emissions_source",
             "node": "nothing"
@@ -427,8 +425,6 @@
             "tags": {
                 "m": "compressor_mass_flow"
             },
-            "stdev": {
-            },
             "stream": "to_compression",
             "node": "nothing"
         },
@@ -438,8 +434,6 @@
             "tags": {
                 "m": "transport_mass_flow"
             },
-            "stdev": {
-            },
             "stream": "to_transport",
             "node": "nothing"
         },
@@ -448,8 +442,6 @@
             "type": "MassFlowMeas",
             "tags": {
                 "m": "injection_mass_flow"
-            },
-            "stdev": {
             },
             "stream": "to_injection",
             "node": "nothing"
@@ -480,8 +472,6 @@
                 "C3": "injection_analyzer.C3",
                 "N2": "injection_analyzer.N2",
                 "He": "injection_analyzer.He"
-            },
-            "stdev": {
             },
             "stream": "to_injection",
             "node": "nothing"
