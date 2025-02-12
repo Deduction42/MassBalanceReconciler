@@ -1,16 +1,7 @@
 ============= Dev Next branch (AffineUnits) =============
-(1)  Build out and test new tag registry
-      -   Vector of TagInfo objects (done)
-      -   Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
-(2)  Constants in the measurement definition (such as standard conditions for volume) need to be strings that can be parsed as quantities or tags
-      -   Attempt to look up the tag first in the unit registry
-      -   If that fails, attempt to parse the string as a quantity "101.3 kPa" and convert to SI units (new parser allows for spaces)
-      -   If that fails, raise an error that the string value is not a tag and can't be parsed as a unit
-(3)  Test JSON builder with new setup (for both JSON dumps and reads)
-      -   MeasQuantity will need to be set as a "StringType" (https://quinnj.github.io/JSON3.jl/stable/#StructTypes.StringType)
-      -   DynamicQuantities CANNOT PARSE THEIR OWN OUTPUT
-           -   To do this, you will need to override the "Base.string" function to produce a parseable output
-           -   This is likely best reserved for AffineDimensions, and you only need to do it for "co2_capture_builder.jl"
+(1)  Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
+
+(2)  Testing on full timeseries implementation
 
 
 ============= DEV branch (Query results) =============
