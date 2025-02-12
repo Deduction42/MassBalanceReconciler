@@ -1,6 +1,7 @@
 include("_AbstractMeas.jl")
 using LinearAlgebra
 using Dates
+using TimeRecords
 const TIMESTAMP_KEY = "_UNIX_TIMESTAMP"
 
 #=============================================================================
@@ -8,9 +9,10 @@ Construction info for entire system
 =============================================================================#
 @kwdef struct PlantInfo <: AbstractInfo
     interval :: Float64
-    thermo  :: ThermoInfo
-    streams :: Vector{StreamInfo} = StreamInfo[]
-    nodes   :: Vector{NodeInfo}   = NodeInfo[]
+    thermo   :: ThermoInfo
+    tags     :: Vector{TagInfo} = TagInfo[]
+    streams  :: Vector{StreamInfo} = StreamInfo[]
+    nodes    :: Vector{NodeInfo}   = NodeInfo[]
     measurements  :: Vector{MeasInfo}  = MeasInfo[]
     relationships :: Vector{StreamRelationship} = StreamRelationship[]
 end
@@ -18,6 +20,7 @@ end
 function PlantInfo(d::AbstractDict{<:Symbol})
     return PlantInfo(
         interval = d[:interval],
+        tags    = TagInfo.(d[:tags]),
         thermo  = ThermoInfo(d[:thermo]),
         streams = StreamInfo.(d[:streams]),
         nodes   = NodeInfo.(d[:nodes]),
@@ -35,6 +38,7 @@ end
 @kwdef struct PlantState{L, N}
     clock        :: PlantClock
     thermo       :: ThermoModel{L,N}
+    tags         :: Vector{TagInfo}
     statevec     :: Vector{Float64}
     statecov     :: Matrix{Float64}
     dpredictor   :: @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}
@@ -42,6 +46,14 @@ end
     streams      :: Vector{StreamRef{L,N}}
     nodes        :: Vector{NodeRef{L,N}}
 end
+
+@kwdef struct PlantSeries{L,N}
+    plant  :: PlantState{L,N}
+    states :: TimeSeries{Vector{Float64}}
+    stdevs :: TimeSeries{Vector{Float64}}
+end
+
+PlantSeries(plant::PlantState{L,N}, states, stdevs) where {L,N} = PlantSeries{L,N}(plant, states, stdevs)
 
 function PlantState(plantinfo::PlantInfo)
 
@@ -91,6 +103,9 @@ function PlantState(plantinfo::PlantInfo)
     statecov = Matrix(Diagonal(statevec.^2))
     dpredictor = (A=transmat, Q=statecov)
 
+    #Update the std info from the tag info
+    taginfos = Dict(tag.tag=>tag for tag in plantinfo.tags)
+    map(meas->update_std!(meas, taginfos), plantinfo.measurements)
 
     #Build the measurements based off the thermodynamic information
     meascollection = MeasCollection{L,Float64}()
@@ -110,6 +125,7 @@ function PlantState(plantinfo::PlantInfo)
     return PlantState{L,length(L)}(
         clock = plantclock,
         thermo = thermo,
+        tags = plantinfo.tags,
         statevec = statevec,
         statecov = statecov,
         dpredictor = dpredictor,

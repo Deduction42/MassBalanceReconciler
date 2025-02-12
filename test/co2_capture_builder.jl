@@ -1,11 +1,32 @@
 using MassBalanceReconciler
+
 using JSON3
+import JSON3.StructTypes
+
+using DynamicQuantities
+import DynamicQuantities.dimension_name
 
 #==============================================================================================
 High-level preamble (species, conecntrations etc)
 ==============================================================================================#
 default_massflow = 20.0
 
+Base.string(q::Quantity{T,D}) where {T<:Number, D<:Dimensions} = "$(ustrip(q))"*string(dimension(q))
+Base.string(q::Quantity{T, D} where {T<:Number, D<:SymbolicDimensions}) = string(uexpand(q))
+
+function Base.string(d::Dimensions) 
+    tmp_io = IOBuffer()
+    for k in filter(k -> !iszero(d[k]), keys(d))
+        print(tmp_io, dimension_name(d, k))
+        isone(d[k]) || print(tmp_io, "^($(d[k]))")
+        print(tmp_io, "*")
+    end
+    s = String(take!(tmp_io))
+    s = replace(s, r"\**$" => "")
+    return s
+end
+
+StructTypes.StructType(::Type{MeasQuantity}) = StructTypes.StringType()
 
 clapeyron_pairs = [
     :C1   => "methane",
@@ -194,13 +215,47 @@ push!(streaminfo, StreamInfo(
 #==============================================================================================
 Measurements for the capture system
 ==============================================================================================#
+taginfo  = TagInfo[]
+
+push!(taginfo, TagInfo(
+    tag   = "emissions_volume_flow",
+    units = us"m^3/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "compressor_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "transport_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+push!(taginfo, TagInfo(
+    tag   = "injection_mass_flow",
+    units = us"kg/s",
+    stdev = 0.01
+))
+
+for lbl in LABELS
+    push!(taginfo, TagInfo(
+        tag   = "injection_analyzer."*string(lbl),
+        units = Quantity(1.0, SymbolicDimensions()),
+        stdev = 0.01
+    ))
+end
+
 measinfo = MeasInfo[]
 
 push!(measinfo, MeasInfo(
     id = :emissions_volume_flow,
     type = VolumeFlowMeas,
-    tags = Dict(:V=>"emissions_volume_flow", :T=>(273.15+25), :P=>(101.3e3)),
-    stdev = Dict(:V=>0.01),
+    tags  = Dict(:V=>"emissions_volume_flow", :T=>convert(MeasQuantity, (273.15+25)u"K"), :P=>convert(MeasQuantity, (101.3e3)u"Pa")),
+    #stdev = Dict(:V=>0.01),
     stream = :emissions_source
 ))
 
@@ -208,7 +263,7 @@ push!(measinfo, MeasInfo(
     id = :compressor_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"compressor_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_compression
 ))
 
@@ -216,7 +271,7 @@ push!(measinfo, MeasInfo(
     id = :transport_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"transport_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_transport
 ))
 
@@ -224,7 +279,7 @@ push!(measinfo, MeasInfo(
     id = :injection_mass_flow,
     type = MassFlowMeas,
     tags = Dict(:m=>"injection_mass_flow"),
-    stdev = Dict(:m=>0.01),
+    #stdev = Dict(:m=>0.01),
     stream = :to_injection
 ))
 
@@ -232,7 +287,7 @@ push!(measinfo, MeasInfo(
     id = :injection_analyzer,
     type  = MoleAnalyzer,
     tags  = Dict(LABELS .=> "injection_analyzer." .* string.(LABELS)),
-    stdev = Dict(LABELS .=> 0.01),
+    #stdev = Dict(LABELS .=> 0.01),
     stream = :to_injection
 ))
 
@@ -256,6 +311,7 @@ Assemble entire system
 ==============================================================================================#
 plantinfo = PlantInfo(
     interval = 60.0*15,
+    tags   = taginfo,
     thermo = thermoinfo,
     streams = streaminfo,
     nodes = nodeinfo,

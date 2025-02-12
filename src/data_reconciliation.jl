@@ -7,6 +7,63 @@ function errorgradient(statevec::AbstractVector, plant::PlantState)
     return Zygote.gradient(x->negloglik(x, plant), statevec)[1]
 end
 
+
+function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
+    #Average the data over the intervals
+    data_avg = si_time_averages(plant, data)
+    vt = timestamps(first(data_avg))
+
+    #Initialize the samples and states
+    samples = Dict{String,Float64}()
+    states = TimeSeries([TimeRecord(t0, deepcopy(plant.statevec))])
+    stdevs = TimeSeries([TimeRecord(t0, sqrt.(diag(plant.statecov)))])
+
+    for t in vt
+        interpolate!(samples, data_avg, t)
+        reconcile!(plant, samples)
+        push!(states, TimeRecord(t, deepcopy(plant.statevec)))
+        push!(stdevs, TimeRecord(t, sqrt.(diag(plant.statecov))))
+    end
+
+    return PlantSeries(plant, states, stdevs)
+end
+
+
+
+function si_time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
+    #Create a vector of sampled timestamps
+    Δt = Second(round(plant.clock.interval[]))
+    t0 = floor(minimum(x->datetime(x[begin]), values(data_avg)), Δt)
+    tN = ceil(maximum(x->datetime(x[end]), values(data_avg)), Δt)
+    vt = t0:Δt:tN
+
+    #Obtain tags and initialize the averages
+    tags = gettags(plant.measurements)
+    data_avg = Dict{String, TimeSeries{promote_type(T,Float64)}}()
+
+    for k in tags #Calculate the averages and convert to SI units
+        vec_avg  = average(data[k], vt)
+        vec_avg .= to_si_units.(values(vec_avg), plant.units[k])
+        data_avg[k] = vec_avg
+    end
+
+    return data_avg
+end
+
+to_si_units(x::Real, u::Quantity)   = ustrip(uexpand(x*u))
+from_si_units(x::Real, u::Quantity) = ustrip(uconvert(u, x*Quantity(1, dimension(uexpand(u)))))
+
+function interpolate!(samples::AbstractDict{K, <:Real}, data::AbstractDict{K, TimeSeries{T}}, t::Real) where {K,T<:Real}
+    f = TimeRecords._interpolate_linsat
+    indhint = max(findbounds(ts, t)[1], 1)
+    for k in keys(data)
+        samples[k] = interpolate(f, data[k], t, indhint)
+    end
+    samples[TIMESTAMP_KEY] = t 
+    return samples
+end
+
+
 function reconcile!(plant::PlantState, data::AbstractDict{<:String, <:Real})
     readvalues!(plant, data)
     updatethermo!(plant)

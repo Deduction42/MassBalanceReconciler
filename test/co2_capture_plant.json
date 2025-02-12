@@ -50,6 +50,138 @@
             "He": "helium"
         }
     },
+    "tags": [
+        {
+            "tag": "emissions_volume_flow",
+            "units": "1.0m^(3)*s^(-1)",
+            "stdev": 0.01
+        },
+        {
+            "tag": "compressor_mass_flow",
+            "units": "1.0kg*s^(-1)",
+            "stdev": 0.01
+        },
+        {
+            "tag": "transport_mass_flow",
+            "units": "1.0kg*s^(-1)",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_mass_flow",
+            "units": "1.0kg*s^(-1)",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.C1",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.C2",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.C3",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.iC4",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC4",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.iC5",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC5",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC6",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC7",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC8",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC9",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.nC10",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.N2",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.CO2",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.O2",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.H2O",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.CO",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.H2S",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.H2",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.He",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.Ar",
+            "units": "1.0",
+            "stdev": 0.01
+        },
+        {
+            "tag": "injection_analyzer.N2O",
+            "units": "1.0",
+            "stdev": 0.01
+        }
+    ],
     "streams": [
         {
             "id": "emissions_source",
@@ -280,12 +412,9 @@
             "id": "emissions_volume_flow",
             "type": "VolumeFlowMeas",
             "tags": {
-                "T": 298.15,
-                "P": 101300,
+                "T": "298.15 K",
+                "P": "101300.0 Pa",
                 "V": "emissions_volume_flow"
-            },
-            "stdev": {
-                "V": 0.01
             },
             "stream": "emissions_source",
             "node": "nothing"
@@ -296,9 +425,6 @@
             "tags": {
                 "m": "compressor_mass_flow"
             },
-            "stdev": {
-                "m": 0.01
-            },
             "stream": "to_compression",
             "node": "nothing"
         },
@@ -308,9 +434,6 @@
             "tags": {
                 "m": "transport_mass_flow"
             },
-            "stdev": {
-                "m": 0.01
-            },
             "stream": "to_transport",
             "node": "nothing"
         },
@@ -319,9 +442,6 @@
             "type": "MassFlowMeas",
             "tags": {
                 "m": "injection_mass_flow"
-            },
-            "stdev": {
-                "m": 0.01
             },
             "stream": "to_injection",
             "node": "nothing"
@@ -352,30 +472,6 @@
                 "C3": "injection_analyzer.C3",
                 "N2": "injection_analyzer.N2",
                 "He": "injection_analyzer.He"
-            },
-            "stdev": {
-                "C2": 0.01,
-                "iC5": 0.01,
-                "nC7": 0.01,
-                "nC10": 0.01,
-                "O2": 0.01,
-                "nC6": 0.01,
-                "C1": 0.01,
-                "Ar": 0.01,
-                "nC4": 0.01,
-                "nC5": 0.01,
-                "nC9": 0.01,
-                "nC8": 0.01,
-                "N2O": 0.01,
-                "H2S": 0.01,
-                "H2": 0.01,
-                "CO2": 0.01,
-                "H2O": 0.01,
-                "iC4": 0.01,
-                "CO": 0.01,
-                "C3": 0.01,
-                "N2": 0.01,
-                "He": 0.01
             },
             "stream": "to_injection",
             "node": "nothing"

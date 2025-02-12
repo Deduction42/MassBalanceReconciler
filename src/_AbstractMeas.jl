@@ -1,7 +1,24 @@
 using Accessors
 using LinearAlgebra
+using DynamicQuantities
+
 include("_AbstractStreamRef.jl")
 
+
+
+@kwdef struct TagInfo
+    tag   :: String
+    units :: MeasQuantity
+    stdev :: Float64
+end
+
+function TagInfo(d::AbstractDict{Symbol})
+    return TagInfo(
+        tag   = d[:tag],
+        units = parse_units(d[:units]),
+        stdev = d[:stdev]
+    )
+end
 
 
 #=============================================================================
@@ -10,8 +27,8 @@ Construction info for measurements
 @kwdef struct MeasInfo 
     id     :: Symbol
     type   :: UnionAll
-    tags   :: Dict{Symbol, Union{String,Float64}}
-    stdev  :: Dict{Symbol, Float64}
+    tags   :: Dict{Symbol, Union{String, MeasQuantity}}
+    stdev  :: Dict{Symbol, Float64} = Dict{Symbol, Float64}()
     stream :: Symbol = :nothing
     node   :: Symbol = :nothing
 end
@@ -21,14 +38,26 @@ function MeasInfo(d::AbstractDict{Symbol})
     return MeasInfo(
         id     = Symbol(d[:id]),
         type   = type,
-        tags   = symbolize(Union{String,Float64}, d[:tags]),
-        stdev  = symbolize(Float64, d[:stdev]),
+        tags   = Dict{Symbol, Union{String, MeasQuantity}}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(d[:tags])),
         stream = Symbol(get(d, :stream, :nothing)),
         node   = Symbol(get(d, :node, :nothing))
     )
 end
 
 MeasInfo(d::AbstractDict{<:AbstractString}) = MeasInfo(symbolize(d))
+
+#Fills out measurement standard deviation (in SI units) from a TagInfo dict
+function update_std!(measinfo::MeasInfo, taginfos::Dict{String, TagInfo})
+    for (k, v) in pairs(measinfo.tags)
+        if v isa AbstractString
+            taginfo = get(taginfos, v) do 
+                throw(ErrorException("Tag registry does not contain '$(v)': ensure it is either a valid tag or can be parsed with 'parse_units(::String)'"))
+            end
+            measinfo.stdev[k] = ustrip(uexpand(taginfo.stdev*taginfo.units))
+        end
+    end
+    return measinfo 
+end
 
 #=
 function build(info::MeasInfo, streams::Dict{Symbol, StreamRef})
@@ -160,21 +189,31 @@ function VolumeFlowMeas(measinfo::MeasInfo, streams::Dict{Symbol, <:StreamRef{S}
         error("Measurement Type: VolumeFlowMeas only supports 3 tags, measurement id '$(measinfo.id)' contains $(length(measinfo.tags))")
     end
     N = length(S)
-    (T, P) = (298.15, 101.3e3)
     stream = streams[measinfo.stream]
+    Tref = measinfo.tags[:T]
+    Pref = measinfo.tags[:P]
+
+    #Assign default (SI) values to T,P if they are quantities, if they are tags, they will be overwritten
+    Tval = (Tref isa Quantity) ? Float64(ustrip(Tref|>us"K"))  : 298.15
+    Pval = (Pref isa Quantity) ? Float64(ustrip(Pref|>us"Pa")) : 101.3e3
+    
 
     thermostate = ThermoState{S, Float64}(
         model=thermo, 
-        T=T, 
-        P=P, 
+        T=Tval, 
+        P=Pval, 
         n=Species{S}(ones(N)./N),
         phase=stream.phase
     )
 
     return VolumeFlowMeas{S, Float64}(
         id       = measinfo.id,
-        tag      = VolState{Union{String,Float64}}(measinfo.tags),
-        value    = VolState{Float64}(V=0.0, T=T, P=P),
+        tag      = VolState{Union{String,Float64}}(
+                      V = measinfo.tags[:V], 
+                      T = (Tref isa AbstractString) ? Tref : Tval,
+                      P = (Pref isa AbstractString) ? Pref : Pval
+                   ),
+        value    = VolState{Float64}(V=0.0, T=Tval, P=Pval),
         stdev    = measinfo.stdev[:V],
         stream   = stream,
         molarvol = molar_volumes(thermostate)
@@ -388,4 +427,45 @@ end
 
 function negloglik(x::AbstractVector, c::MeasCollection)
     return sum(fn-> negloglik(x, c[fn]), fieldnames(MeasCollection))
+end
+
+gettags(c::MeasCollection) = gettags!(String[], c)
+
+function gettags!(tags::AbstractVector{String}, c::MeasCollection)
+    for fn in fieldnames(MeasCollection)
+        gettags!(tags, c[fn])
+    end
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, vm::AbstractVector{<:AbstractMeas})
+    for m in vm
+        gettags!(tags, m)
+    end
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::AbstractSingleMeas)
+    push!(tags, m.tag)
+    return tags
+end
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::AbstractMultiMeas)
+    for tag in m.tag
+        push!(tags, tag)
+    end
+    return tags
+end
+
+gettags!(tags::AbstractVector{<:AbstractString}, m::MoleBalance) = tags
+
+function gettags!(tags::AbstractVector{<:AbstractString}, m::VolumeFlowMeas)
+    addtag!(tags::AbstractVector, tag::AbstractString) = push!(tags, tag)
+    addtag!(tags::AbstractVector, tag::Real) = tags
+
+    for tag in m.tag[]
+        addtag!(tags, tag)
+    end
+
+    return tags
 end
