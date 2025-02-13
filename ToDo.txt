@@ -5,7 +5,9 @@
       -   We have to calcualte inv(S) before we optimize (to simplify derivatives and avoid excessive matrix inversions)
       -   Look into estimating the Hessian directly for a new inv(S)
       -   Look at matrix inversion lemma (which lets us get away with one inversion):
+               https://tlienart.github.io/posts/2018/12/13-matrix-inversion-lemmas/index.html
                inv(F*G*H + E) ≈ iE - iE*F*inv(iG + H*iE*F)*H*iE
+               Or even the Sherman-Morrison formula (on the same web page) which may be even better because Q is diagonal
 
 (2)  Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
 
