@@ -1,7 +1,13 @@
 ============= Dev Next branch (AffineUnits) =============
-(1)  Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
+(1)  We need to store the inverse covariance (icov) instead of the state covaraince
+      -   Our current error is (x'S*x) which is incorrect
+      -   We need to use (x'*inv(S)*x)
+      -   We have to calcualte inv(S) before we optimize (to simplify derivatives and avoid excessive matrix inversions)
+      -   Look into estimating the Hessian directly for a new inv(S)
+      -   Look at matrix inversion lemma (which lets us get away with one inversion):
+               inv(F*G*H + E) ≈ iE - iE*F*inv(iG + H*iE*F)*H*iE
 
-(2)  Testing on full timeseries implementation
+(2)  Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
 
 
 ============= DEV branch (Query results) =============

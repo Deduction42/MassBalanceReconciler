@@ -8,19 +8,30 @@ function errorgradient(statevec::AbstractVector, plant::PlantState)
 end
 
 
-function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
+function reconcile!(plant::PlantState, interval::TimeInterval, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
     #Average the data over the intervals
-    data_avg = si_time_averages(plant, data)
-    vt = timestamps(first(data_avg))
+    data_avg = si_time_averages(plant, interval, data)
+    vt = data_avg[TIMESTAMP_KEY]
 
     #Initialize the samples and states
     samples = Dict{String,Float64}()
-    states = TimeSeries([TimeRecord(t0, deepcopy(plant.statevec))])
-    stdevs = TimeSeries([TimeRecord(t0, sqrt.(diag(plant.statecov)))])
+    t0 = interval[begin]
+    states  = TimeSeries([TimeRecord(t0, deepcopy(plant.statevec))])
+    stdevs  = TimeSeries([TimeRecord(t0, sqrt.(diag(plant.statecov)))])
 
-    for t in vt
-        interpolate!(samples, data_avg, t)
-        reconcile!(plant, samples)
+    #Reconciliation for each timestamp
+    for ii in eachindex(vt)
+        for (k, v) in pairs(data_avg)
+            samples[k] = v[ii]
+        end
+        t  = samples[TIMESTAMP_KEY]
+        optimresults = reconcile!(plant, samples)[1]
+
+        @info "$(round(ii/length(vt)*100)) % complete 
+         status: $(optimresults.retcode)
+         time: $(round(optimresults.stats.time, digits=6)) s
+         iterations: $(optimresults.stats.iterations)"
+
         push!(states, TimeRecord(t, deepcopy(plant.statevec)))
         push!(stdevs, TimeRecord(t, sqrt.(diag(plant.statecov))))
     end
@@ -29,39 +40,34 @@ function reconcile!(plant::PlantState, data::AbstractDict{K, TimeSeries{T}}) whe
 end
 
 
+"""
+si_time_averages(plant::PlantState, interval::TimeInterval, data::AbstractDict{<:String, TimeSeries{T}}) where T
 
-function si_time_averages(plant::PlantState, data::AbstractDict{<:String, TimeSeries{T}}) where T
+Use numerical integration to find averages on 'data', over the time interval 'interval' at the desired sampling rate 
+defined in 'plant.clock.interval'. This produces a regularly sampled Dict{String, Vector{T}} where values are in SI units
+"""
+function si_time_averages(plant::PlantState, interval::TimeInterval, data::AbstractDict{<:String, TimeSeries{T}}) where T
     #Create a vector of sampled timestamps
-    Δt = Second(round(plant.clock.interval[]))
-    t0 = floor(minimum(x->datetime(x[begin]), values(data_avg)), Δt)
-    tN = ceil(maximum(x->datetime(x[end]), values(data_avg)), Δt)
-    vt = t0:Δt:tN
+    Δt = round(plant.clock.interval[])
+    vt = interval[begin]:Δt:interval[end]
 
     #Obtain tags and initialize the averages
-    tags = gettags(plant.measurements)
-    data_avg = Dict{String, TimeSeries{promote_type(T,Float64)}}()
+    data_avg = Dict{String, Vector{promote_type(T,Float64)}}()
 
-    for k in tags #Calculate the averages and convert to SI units
-        vec_avg  = average(data[k], vt)
-        vec_avg .= to_si_units.(values(vec_avg), plant.units[k])
-        data_avg[k] = vec_avg
+    for taginfo in plant.tags #Calculate the averages and convert to SI units
+        vec_avg  = values(average(data[taginfo.tag], vt, order=0))
+        vec_avg .= to_si_units.(vec_avg, taginfo.units)
+        data_avg[taginfo.tag] = vec_avg
     end
+
+    #Timestamps representing the end of the averaging period
+    data_avg[TIMESTAMP_KEY] = vt[(begin+1):end]
 
     return data_avg
 end
 
 to_si_units(x::Real, u::Quantity)   = ustrip(uexpand(x*u))
 from_si_units(x::Real, u::Quantity) = ustrip(uconvert(u, x*Quantity(1, dimension(uexpand(u)))))
-
-function interpolate!(samples::AbstractDict{K, <:Real}, data::AbstractDict{K, TimeSeries{T}}, t::Real) where {K,T<:Real}
-    f = TimeRecords._interpolate_linsat
-    indhint = max(findbounds(ts, t)[1], 1)
-    for k in keys(data)
-        samples[k] = interpolate(f, data[k], t, indhint)
-    end
-    samples[TIMESTAMP_KEY] = t 
-    return samples
-end
 
 
 function reconcile!(plant::PlantState, data::AbstractDict{<:String, <:Real})
@@ -108,10 +114,17 @@ function reconcile_statecov!(plant, meas)
     R  = noisecov(meas)
     Pi = plant.statecov[inds, inds]
     S  = C*Pi*C' .+ R
-    K  = (Pi*C')/S
-    Kp = I-K*C
+    
+    K = try
+        (Pi*C')/S
+    catch err
+        @warn "gain for $(meas.id) produced $(string(err)), skipping covariance update"
+        return plant.statecov
+    end
 
     if all(isfinite, K)
+        Kp = I-K*C
+
         #Update inner covariance structure
         plant.statecov[inds, inds] .= Kp*Pi*Kp' .+ K*R*K'
 
