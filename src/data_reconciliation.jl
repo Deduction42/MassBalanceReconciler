@@ -9,6 +9,9 @@ end
 
 
 function reconcile!(plant::PlantState, interval::TimeInterval, data::AbstractDict{K, TimeSeries{T}}) where {K<:AbstractString, T<:Real}
+    get_statevec(plant::PlantState) = deepcopy(plant.statevec)
+    get_statestd(plant::PlantState) = sqrt.(inv.(diag(plant.stateinv)))
+
     #Average the data over the intervals
     data_avg = si_time_averages(plant, interval, data)
     vt = data_avg[TIMESTAMP_KEY]
@@ -16,8 +19,8 @@ function reconcile!(plant::PlantState, interval::TimeInterval, data::AbstractDic
     #Initialize the samples and states
     samples = Dict{String,Float64}()
     t0 = interval[begin]
-    states  = TimeSeries([TimeRecord(t0, deepcopy(plant.statevec))])
-    stdevs  = TimeSeries([TimeRecord(t0, sqrt.(diag(plant.statecov)))])
+    states  = TimeSeries([TimeRecord(t0, get_statevec(plant))])
+    stdevs  = TimeSeries([TimeRecord(t0, get_statestd(plant))])
 
     #Reconciliation for each timestamp
     for ii in eachindex(vt)
@@ -32,8 +35,8 @@ function reconcile!(plant::PlantState, interval::TimeInterval, data::AbstractDic
          time: $(round(optimresults.stats.time, digits=6)) s
          iterations: $(optimresults.stats.iterations)"
 
-        push!(states, TimeRecord(t, deepcopy(plant.statevec)))
-        push!(stdevs, TimeRecord(t, sqrt.(diag(plant.statecov))))
+        push!(states, TimeRecord(t, get_statevec(plant)))
+        push!(stdevs, TimeRecord(t, get_statestd(plant)))
     end
 
     return PlantSeries(plant, states, stdevs)
@@ -94,51 +97,13 @@ function reconcile_statevec!(plant::PlantState)
     return results
 end
 
-
-
 function reconcile_statecov!(plant::PlantState)
-    for measvec in plant.measurements[:]
-        for meas in measvec
-            reconcile_statecov!(plant, meas)
-        end
-    end
-    return plant.statecov
+    objfunc = Base.Fix2(negloglik, plant)
+    H = Zygote.hessian(objfunc, plant.statevec)
+    plant.stateinv .= hermitianpart!(H)
+    return plant.stateinv
 end
 
-
-function reconcile_statecov!(plant, meas)
-    inds = falses(length(plant.statevec))
-    addinds!(inds, meas)
-
-    C  = observation_matrix(meas, plant.statevec)[:,inds]
-    R  = noisecov(meas)
-    Pi = plant.statecov[inds, inds]
-    S  = C*Pi*C' .+ R
-    
-    K = try
-        (Pi*C')/S
-    catch err
-        @warn "gain for $(meas.id) produced $(string(err)), skipping covariance update"
-        return plant.statecov
-    end
-
-    if all(isfinite, K)
-        Kp = I-K*C
-
-        #Update inner covariance structure
-        plant.statecov[inds, inds] .= Kp*Pi*Kp' .+ K*R*K'
-
-        #Get the outer indices
-        outs = .!inds
-
-        #Update the outer covariance
-        PU = Kp*(@view plant.statecov[inds, outs])
-        plant.statecov[inds, outs] .= PU
-        plant.statecov[outs, inds] .= PU'
-    end
-
-    return plant.statecov
-end
 
 function observation_matrix(meas::AbstractMeas, xref::AbstractVector)
     obsfunc(x::AbstractVector) = -innovation(x, meas)

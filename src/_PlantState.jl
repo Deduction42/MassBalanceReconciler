@@ -40,7 +40,7 @@ end
     thermo       :: ThermoModel{L,N}
     tags         :: Vector{TagInfo}
     statevec     :: Vector{Float64}
-    statecov     :: Matrix{Float64}
+    stateinv     :: Matrix{Float64}
     dpredictor   :: @NamedTuple{A::Matrix{Float64}, Q::Matrix{Float64}}
     measurements :: MeasCollection{L, Float64, N}
     streams      :: Vector{StreamRef{L,N}}
@@ -98,9 +98,13 @@ function PlantState(plantinfo::PlantInfo)
     #Fill the state vector according to reaction stoichiometry
     fillstate!(statevec, nodes)
 
+    #Make sure there are no zeros
+    statevec = max.(statevec, maximum(statevec)*1e-6)
+
     #Build the state covariance assuming the nominal values are the standard deviation    #Obtain the state transition object
-    transmat = state_transition(Nx, plantinfo.relationships, streamdict)
-    statecov = Matrix(Diagonal(statevec.^2))
+    transmat   = state_transition(Nx, plantinfo.relationships, streamdict)
+    statecov   = Matrix(Diagonal(statevec.^2))
+    stateinv   = Matrix(inv(Diagonal(statevec.^2)))
     dpredictor = (A=transmat, Q=statecov)
 
     #Update the std info from the tag info
@@ -127,7 +131,7 @@ function PlantState(plantinfo::PlantInfo)
         thermo = thermo,
         tags = plantinfo.tags,
         statevec = statevec,
-        statecov = statecov,
+        stateinv = stateinv,
         dpredictor = dpredictor,
         measurements = meascollection,
         streams = streams,
@@ -138,15 +142,26 @@ end
 
 function predict!(plant::PlantState)
     interval = plant.clock.interval[]
+
+    #Predict the state
     Ad = exp(interval.*plant.dpredictor.A)
     plant.statevec .= Ad*plant.statevec
-    plant.statecov .= Ad'*plant.statecov*Ad + interval.*plant.dpredictor.Q
+
+    #Predict the state covariance using the Woodbury Formula
+    #https://tlienart.github.io/posts/2018/12/13-matrix-inversion-lemmas/index.html
+    #inv(F*G*H + E) ≈ iE - iE*F*inv(iG + H*iE*F)*H*iE
+    iP = plant.stateinv
+    iQ = Diagonal(plant.dpredictor.Q)
+    F  = Ad 
+    H  = Ad'
+    plant.stateinv .= iQ .- iQ*F*inv(hermitianpart(iP + H*iQ*F))*H*iQ
+    hermitianpart!(plant.stateinv)
     return plant 
 end
 
 function negloglik(x::AbstractVector, plant::PlantState)
     Δx = x .- plant.statevec
-    state_negloglik = Δx'*plant.statecov*Δx
+    state_negloglik = Δx'*plant.stateinv*Δx
     meas_negloglik  = negloglik(x, plant.measurements)
     return state_negloglik + meas_negloglik
 end
