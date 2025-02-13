@@ -34,11 +34,14 @@ Construction info for measurements
 end
 
 function MeasInfo(d::AbstractDict{Symbol}) 
-    type = eval(Meta.parse(d[:type]))
+    MeasType = eval(Meta.parse(d[:type]))
+    TagTypes = Union{String, MeasQuantity}
+    buildtags(tagd) = Dict{Symbol,TagTypes}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(tagd))
+
     return MeasInfo(
         id     = Symbol(d[:id]),
-        type   = type,
-        tags   = Dict{Symbol, Union{String, MeasQuantity}}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(d[:tags])),
+        type   = MeasType,
+        tags   = buildtags(d[:tags]),
         stream = Symbol(get(d, :stream, :nothing)),
         node   = Symbol(get(d, :node, :nothing))
     )

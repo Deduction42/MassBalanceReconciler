@@ -37,4 +37,4 @@ symbolize(x::AbstractDict{Symbol, T}) where T = Dict(Symbol(k)=>v for (k,v) in p
 symbolize(x::AbstractDict{Symbol, <:Real}) = Dict(Symbol(k)=>Float64(v) for (k,v) in pairs(x))
 
 symbolize(::Type{T}, x::AbstractDict) where T = Dict{Symbol, T}(Symbol(k)=>convert(T, v) for (k,v) in pairs(x))
-symbolize(::Type{T}, x::AbstractDict) where T <: AbstractQuantity = Dict{Symbol, Union{String, MeasQuantity}}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(x))
+#symbolize(::Type{T}, x::AbstractDict) where T <: AbstractQuantity = Dict{Symbol, Union{String, MeasQuantity}}(Symbol(k)=>tryparse_units(v) for (k,v) in pairs(x))
