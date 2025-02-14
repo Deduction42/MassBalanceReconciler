@@ -139,6 +139,37 @@ function PlantState(plantinfo::PlantInfo)
     )
 end
 
+function getseries(plantseries::PlantSeries{L}; stream, component=L) where L
+    streamref = getstreamref(plantseries, stream)
+    compinds  = map(c->streamref.index[c], component)
+    return (
+        time  = timestamps(plantseries.states),
+        state = map(ind->[x.v[ind] for x in plantseries.states], compinds),
+        stdev = map(ind->[σ.v[ind] for σ in plantseries.stdevs], compinds)
+    )
+end
+
+function getstream(plantstate::PlantState{L}; stream, component=L) where L
+    streamref = getstreamref(plantstate, stream)
+    compinds  = map(c->streamref.index[c], component)
+    return (
+        time  = plantstate.clock.timestamp,
+        state = plantstate.statevec[compinds],
+        stdev = inv.(sqrt.(diag(plantstate.stateinv)[compinds]))
+    )
+end
+
+getstreamref(plant::PlantSeries, id::Symbol) = getstreamref(plant.plant, id)
+
+function getstreamref(plant::PlantState, id::Symbol)
+    for s in plant.streams
+        if s.id == id 
+            return s
+        end
+    end
+    throw(ArgumentError("No streams found in plant with id '$(id)'"))
+end
+
 
 function predict!(plant::PlantState)
     interval = plant.clock.interval[]
