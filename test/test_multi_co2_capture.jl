@@ -20,8 +20,8 @@ vt = t0:60:tN
 N  = length(vt)
 interval = TimeInterval(t0,tN)
 
-#Build timeseries by repeating the same measurements from mmeas_dict
-ts_dict = Dict(k=>TimeSeries(TimeRecord.(vt,v)) for (k,v) in pairs(meas_dict))
+#Build timeseries by repeating the same measurements (with noise) from meas_dict
+ts_dict = Dict(k=>TimeSeries(TimeRecord.(vt, v.*exp.(0.1.*randn(N)))) for (k,v) in pairs(meas_dict))
 
 #Build plant object, and assign the timestamp
 plantinfo  = PlantInfo(capture_dict)
