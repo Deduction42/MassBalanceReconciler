@@ -31,5 +31,5 @@ P0 = deepcopy(plantstate.statecov)
 P1 = reconcile_statecov!(plantstate)
 update_balance_errors!(plantstate)
 =#
-@profview (optimresults, statecov) = reconcile!(plantstate, meas_dict)
+(optimresults, statecov) = reconcile!(plantstate, meas_dict)
 

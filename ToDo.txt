@@ -1,8 +1,7 @@
 ============= Dev Next branch (AffineUnits) =============
 (1)  Unit lookup for MeasInfo (cross validate during build if TagInfo or MeasInfo are missing tags)
 
-(2)  Testing on full timeseries implementation
-
+(2)  Fully test for new AffineUnits update
 
 ============= DEV branch (Query results) =============
 (1) Build query functions for PlantState and PlantSeries (values and stdevs) for main states (stream components, reactions etc)
@@ -19,39 +18,30 @@
 
 
 ============= Port to parent "Carbon" application ====================
-(O0) Develop workflow for model construction
+(1) Develop workflow for model construction
      -  Prepare the global indexer ref to be used for all JSONs
      -  From JSON, Build Dict{Symbol, StreamInfo{L,String,N}} (t, p, moles are tags to pull from tagdict)
      -  From JSON, Build Vector{AbstractMeas{L,String,N}} (value is the tag to pull from the tagdict)
      -  From JSON, Build Vector{NodeInfo}{L,N} (no tags required, but reactions need to be parsed)
-(O1) Create specific Species types 
-     -  GhGSpecies{T} = Species{(:CO2, :CH4, :N2O, :Other), T, 4}
-     -  AnalyzerSpecies{T} = Species{(...), T, length(...)}
-(O2) Create a method to collapse AnalyzerSpecies to GhGSpecies
-     -  gases = species(GhGSpecies)
-     -  gastuple = map(gas-> get(analyzerspecies, gas, zero(T)), gases)
-     -  ghgtuple = (gastuple[begin:(end-1)]..., sum(analyzerspecies) - sum(gastuple[begin:(end-1)]))
-     -  return GhGSpecies{T}(ghgtuple)
-(O3) Use these collapse methods to create methods to get attributes like
-     -  molar_volumes(GhgSpecies, model, streaminfo)
-     -  molar_weights(GhGSpecies, model, streaminfo)
-(O4) A mass balance system must have a single set of components, but multiple systems can be merged
-     -  Every "high-level system" contains the following elements:
-          -  nodes Dict{Symbol, NodeInfo}
-          -  streams Dict{Symbol, StreamInfo}
-          -  proportions Dict{Symbol, (:parent, :proportion, :timeconstant)}
-          -  measurements Dict{Symbol, NamedTuple{(:tags, :stream, :type)}}
-          -  TimeRecord{GaussianState}
-     -  This high level system in conjuction with "tagdict" is used to create a state space model with
-          -  GaussianState
-          -  predictor Tuple{A::Matrix{Float64}, Q::Matrix{Float64}}
-          -  measurements MeasCollection
-     -  Both models will have the merged node with the input and output streams
-          -  Input => MergedNode => Output 
-          -  The upstream model results provide a measurement to the downstream's "Input" stream
-          -  The downstream model results provde a measurement to the upstreams's "Output" stream
-     -  Only "intersecting" species can have non-zero values
-          -  Other speceis are the average between input and output
-     -  This will be useful for adding "combustion" units to the mass balance
-          -  These will have a large number of components which would cause adjacent systems to have very large states
-          -  This will also allow easy aggregation of streams to GhGSpecies
+
+
+============= Future enancements ====================
+(1) Add VolumeDensMeas
+     -  Like VolumeFlowMeas but instead of (V,T,P) fields, we have (V,D)
+     -  Useful for liquids with known density (often density is assumed and not measured)
+
+(2) Nullable stream indexing
+     -  When we know that a certain component is zero, we don't need to add it to the state
+     -  A nullable species indexer will return zero for all indices that are "nothing"
+     -  A nullable species indexer will not set any values for all indices that are "nothing"
+     -  This may be a simpler than Node-Merging below if there are only a couple of odd streams (like fuel)
+
+(3) Merge different mass balance systems with different component lists
+     -  Used to make the high-level model O(2N) instead of O(N^3)
+          -  Creates a "tuple" of plants
+     -  Solves each plant separately
+          -  Each plant's external streams has a MolarFlowEstimate (new measurement)
+          -  These are ignored during the first run 
+     -  MolareFlowEstimates are combined based off adjacent systems
+          -  Variances are diagonal to speed up inference
+          -  Each plant is solved once more with these new observations 
