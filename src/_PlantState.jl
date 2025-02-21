@@ -139,7 +139,7 @@ function PlantState(plantinfo::PlantInfo)
     )
 end
 
-function getseries(plantseries::PlantSeries{L}; stream, component=L) where L
+function getrecords(plantseries::PlantSeries{L}; stream, component=L) where L
     streamref = getstreamref(plantseries, stream)
     compinds  = map(c->streamref.index[c], component)
     return (
@@ -149,7 +149,7 @@ function getseries(plantseries::PlantSeries{L}; stream, component=L) where L
     )
 end
 
-function getstream(plantstate::PlantState{L}; stream, component=L) where L
+function getrecords(plantstate::PlantState{L}; stream, component=L) where L
     streamref = getstreamref(plantstate, stream)
     compinds  = map(c->streamref.index[c], component)
     return (
