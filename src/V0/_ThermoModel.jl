@@ -10,6 +10,30 @@ abstract type AbstractThermo{L} end
 species(::Type{<:AbstractThermo{L}}) where L = L
 species(x::AbstractThermo{L}) where L = L
 
+#=======================================================================================
+# Structure that contains thermodynamic information to build thermo models
+=======================================================================================#
+@kwdef struct ThermoInfo
+    labels  :: Vector{Symbol}
+    definitions :: Dict{Symbol, Union{String, Dict{String,Float64}}}
+end
+
+function ThermoInfo(labels::AbstractVector, definitions::AbstractDict)
+    T = Union{String, Dict{String,Float64}}
+    return ThermoInfo(
+        labels = symbolize(labels),
+        definitions = Dict{Symbol, T}(Symbol(k)=>_thermodef(v) for (k,v) in definitions)
+    )
+end
+
+function ThermoInfo(d::AbstractDict{Symbol})
+    return ThermoInfo(
+        labels = symbolize(d[:labels]),
+        definitions = d[:definitions]
+    )
+end
+
+ThermoInfo(d::AbstractDict{<:AbstractString}) = symbolize(d)
 
 function _thermodef(d::AbstractDict{Symbol, Float64})
     return Dict{String,Float64}(string(k)=>_thermodef(v) for (k,v) in pairs(d))
@@ -79,7 +103,7 @@ function ThermoModel{L}(substances::AbstractVector{ThermoSubstance}) where L
     return ThermoModel{L}(Species{L}(substances), mixed, molmap)
 end
 
-function ThermoModel{L}(thermomap::Union{NamedTuple, AbstractDict{Symbol}}) where {L}
+function ThermoModel{L}(thermomap::AbstractDict{Symbol}) where {L}
     models = Species{L}(map(s->ThermoSubstance(thermomap[s]), SVector(L)))
     return ThermoModel{L}(models)
 end
@@ -118,14 +142,11 @@ function Clapeyron.volume(state::ThermoState; T=state.T, P=state.P, n=state.n, p
 end
 
 function molar_volumes(state::ThermoState{L}) where L 
+    moles = state.n[:]
     volfunc(x) = volume(state, n=x)
-
-    molefracs = fractions(state.n[:])
-    vol   = volfunc(molefracs)
-    dvol  = ForwardDiff.gradient(volfunc, molefracs)
-    shrinkage = vol/dot(dvol, molefracs) #Close to 1 for ideal gases
-
-    return Species{L}(shrinkage.*dvol)
+    vol   = volfunc(moles)
+    dvol  = ForwardDiff.gradient(volfunc, moles)
+    return Species{L}((vol/dot(dvol, moles)).*dvol)
 end
 
 function readvalues(d::Dict{<:Any,<:ET}, obj::ThermoState{L}) where {L,ET}

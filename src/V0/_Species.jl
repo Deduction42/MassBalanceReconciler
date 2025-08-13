@@ -1,17 +1,5 @@
 using StaticArrays
 
-#=====================================================================================================
-This could be expanded to produce a very useful package, I would call "DuckVectors"
-    Vectors are "duck-typed" based on field names 
-    Promotion will yield the first object's type
-    Converting types will use 'FirstType{FirstFields}(second_arg[first_fields])'
-    This ensures fields are always aligned even if they're out of order
-
-We may want mutable versions, resulting in AbstractDuckVector
-    SDVector (using SVector)
-    MDVector (using SizedVector)
-=====================================================================================================#
-
 #Species inherits all constructors from StaticVector
 #Only need to define specific constrcutors as well as supporting Tuple (for varargs)
 
@@ -24,14 +12,7 @@ struct Species{L,T,N} <: StaticVector{N,T}
         return new{L, T, length(L)}(SVector{length(L),T}(x))
     end
 end
-Base.values(x::Species) = x.data
-speciesvec(x::Species) = values(x)
-
-fractions(x::Species{S}) where S = Species{S}(fractions(values(x)))
-function fractions(x::AbstractVector)
-    all(z->z>=0, x) || ArgumentError("No elements can be negative")
-    return x/sum(x)
-end
+speciesvec(x::Species) = x.data
 
 #Extend key StaticArray interface functions
 StaticArrays.length(::Type{<:Species{L}}) where L = length(L)
@@ -94,9 +75,6 @@ function Base.setindex!(x::AbstractVector{T}, idx::Species{L,<:Integer}, vals::S
 end
 
 speciesvec(x::AbstractVector, idx::Species)  = x[idx.data]
-speciesvec(x::AbstractVector, idx::AbstractVector{<:Species}) = sum(Base.Fix1(speciesvec, x), idx)
-
-Base.zero(::Type{<:Species{L,T}}) where {L,T} = Species{L}(zero(SVector{length(L),T}))
 
 #=============================================================================
 Default methods for total and specific aggregation (only works for same type)

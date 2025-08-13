@@ -1,90 +1,90 @@
 include("_ThermoModel.jl")
+using Accessors
+
+#=============================================================================
+Construction info for streams
+=============================================================================#
+@kwdef struct StreamInfo <: AbstractInfo
+    id        :: Symbol
+    massflow  :: Float64
+    molefracs :: Union{Symbol, Dict{Symbol, Float64}}
+    phase     :: Symbol = :unknown
+end
+hasparent(info::StreamInfo) = info.molefracs isa Symbol
+
+function StreamInfo(d::AbstractDict{Symbol})
+    molefracs = d[:molefracs]
+
+    return StreamInfo(
+        id = Symbol(d[:id]),
+        massflow  = d[:massflow],
+        molefracs = (molefracs isa AbstractDict) ? symbolize(Float64, molefracs) : symbolize(molefracs),
+        phase = Symbol(get(d, :phase, :unknown))
+    )
+end
+
+StreamInfo(d::AbstractDict{<:AbstractString}) = StreamInfo(symbolize(d))
 
 #=============================================================================
 Abstract stream interface
 =============================================================================#
 abstract type AbstractStreamRef{L} end
 
+function stateindex!(indref::Base.RefValue, s::Species{L}) where {L}
+    N = length(L)
+    start = indref[] + 1
+    indref[] = indref[] + N
+    return Species{L}(SVector{N}(start:indref[]))
+end
+
+function stateindex!(indref::Base.RefValue, r::Integer)
+    indref[] = indref[] + 1
+    return indref[]
+end
+
+
 #=============================================================================
 Construction info for streams
 =============================================================================#
 @kwdef struct StreamRef{L, N} <: AbstractStreamRef{L}
     id :: Symbol
-    comp  :: Species{L,Int,N}
-    flow  :: Int
-    refid :: Symbol = NULL_SYMBOL
+    index :: Species{L, Int, N}
     phase :: Symbol = :unknown
+    refid :: Symbol = :nothing
+    scale :: Int = 0
 end
-hasparents(streamref::StreamRef) = streamref.refid != NULL_SYMBOL
+hasparent(streamref::StreamRef) = (streamref.refid != :nothing)
 
-function StreamRef{L}(;id, refid=NULL_SYMBOL, phase=:unknown) where L
+function StreamRef{L}(;id, refid=:nothing, phase=:unknown) where L
     N = length(L)
     return StreamRef{L,N}(
         id = id,
-        comp  = zero(Species{L,Int,N}),
-        flow  = 0,
+        index = Species{L, Int, N}(zero(SVector{N,Int})),
+        phase = phase,
         refid = refid,
-        phase = phase
+        scale = 0
     )
 end
 
 function StreamRef{L}(info::StreamInfo) where L
-    return StreamRef{L}(id=info.id, refid=info.copycomp[], phase=info.phase)
+    refid = hasparent(info) ? info.molefracs : :nothing
+    return StreamRef{L}(id=info.id, refid=refid, phase=info.phase)
 end
 
-#Basic state index building
-function nextindex!(ind::RefValue{<:Integer})
-    ind[] = ind[] + 1 
-    return ind[] 
-end
-
-function nextindices!(ind::RefValue{<:Integer}, N::Integer)
-    ind1  = ind[] + 1
-    ind[] = ind[] + N 
-    return ind1:ind[]
-end
-
-function stateindex!(::Type{<:Species{L,T}}, indref::RefValue) where {L,T}
-    N = length(L)
-    return Species{L,T,N}(nextindices!(indref, N))
-end
-
-function stateindex!(::Type{T}, indref::RefValue) where T <: Integer
-    return T(nextindex!(indref))
-end
-
-
-function stateindex!(::Type{<:StreamRef{L}}, indref::RefValue, init::StreamRef{L}) where L
-    N = length(L)
-    ischild = hasparents(init)
-
-    #Check if initializer is already assigned
-    if !iszero(init.comp.data)
-        error("StreamRef composition index already assigned, cannot re-index")
-    elseif !iszero(init.flow)
-        error("StreamRef flow index already assigned, cannot re-index")
+function stateindex!(indref::Base.RefValue, streamref::StreamRef{L}) where {L}
+    if hasparent(streamref)
+        return @set streamref.scale = stateindex!(indref, streamref.scale)
+    else
+        return @set streamref.index = stateindex!(indref, streamref.index)
     end
-
-    #Perform the indexing
-    comp  = ischild ? init.comp : stateindex!(Species{L,Int,N}, indref)
-    flow  = ischild ? stateindex!(Int, indref) : 0
-
-    return StreamRef{L,N}(
-        id = init.id,
-        comp = comp, 
-        flow = flow,
-        refid = init.refid,
-        phase = init.phase
-    )
 end
 
 function speciesvec(X::AbstractVector, ind::StreamRef)
-    moleflows = speciesvec(X, ind.comp)
-    if iszero(ind.flow)
-        return moleflows
+    species = speciesvec(X, ind.index)
+    if ind.refid == :nothing
+        return species
     else
-        moleflows_ε = moleflows .+ MOL_ε
-        return (X[ind.flow]/sum(moleflows_ε))*moleflows_ε
+        return species.*X[ind.scale]
     end
 end
 
@@ -93,47 +93,50 @@ function Base.getindex(X::AbstractVector, ind::StreamRef{L}) where {L}
 end
 
 
+
 """
 stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
 
-Fills out state index information for `streams`, returns the streams
+Fills out state index information for `streams`, retuns the reference of the indexer (holding the last state index)
 """
-function stateindex!(streams::Vector{T}, indref::RefValue) where T<:StreamRef
-    #Fill out baseline state indexing information
-    for ii in eachindex(streams)
-        streams[ii] = stateindex!(T, indref, streams[ii])
+function stateindex!(indref::Base.RefValue, streams::Vector{<:StreamRef})
+    #Fill out state indexing information
+    for (ii, stream) in enumerate(streams)
+        streams[ii] = stateindex!(indref, stream)
     end
 
     #Fill all compositions that are missing (because they refer to another stream)
     streamdict = Dict(stream.id=>stream for stream in streams)
     for k in keys(streamdict)
-        _fillindex!(streamdict, k)
+        _fillcomposition!(streamdict, k)
     end
 
-    #Update the values of the streams with all indices filled
-    for ii in eachindex(streams)
-        streams[ii] = streamdict[streams[ii].id]
+    #Fill the stream list
+    for (ii, stream) in enumerate(streams)
+        if hasparent(stream)
+            streams[ii] = streamdict[stream.id]
+        end
     end
 
-    return streams
+    return indref
 end
 
 #Fill the composition of the stream indexed by "id" (fills in the parent if it's not filled in yet)
-function _fillindex!(streamdict::Dict{Symbol, <:StreamRef}, id::Symbol)
+function _fillcomposition!(streamdict::Dict{Symbol, <:StreamRef}, id::Symbol)
     stream = streamdict[id]
 
-    #If the composition is already filled, do nothing
-    if !iszero(stream.comp)
+    #If the first index is non-zero, this stream composition is already filled out so just return it
+    if !iszero(first(stream.index)) 
         return stream
     end
 
-    #Otherwise, recursively fill the parents (if it's filled it will do nothing)
-    refid = stream.refid
-    refstream = _fillindex!(streamdict, refid)
+    #Ensure that the parent stream is already filled out
+    parent = _fillcomposition!(streamdict, stream.refid)
 
-    #Set the index to the parent and return the new stream
-    newstream = @set stream.comp = refstream.comp
-    streamdict[id] = newstream 
+    #Return the stream with the new index
+    newstream = @set stream.index = parent.index 
+    streamdict[id] = newstream
+    
     return newstream
 end
 
@@ -144,14 +147,14 @@ Chemical reactions
 @kwdef struct ReactionRef{L,N} <: AbstractStreamRef{L}
     id :: Symbol
     stoich :: Species{L,Float64,N}
-    rate :: Int
+    extent :: Int = 0
 end
 
 function ReactionRef{L}(;id, stoich) where {L} 
     return ReactionRef{L,length(L)}(
         id = id,
         stoich = stoich,
-        rate = 0
+        extent = 0
     )
 end
 
@@ -161,21 +164,12 @@ function ReactionRef{L}(id::Symbol, reactinfo::Dict{Symbol,Float64}) where L
 end
 
 
-function stateindex!(::Type{<:ReactionRef{L}}, indref::RefValue, init::ReactionRef{L}) where {L}
-    N = length(L)
-
-    if !iszero(init.rate)
-        error("ReactionRef is already assigned an index, cannot re-index")
-    end
-
-    return ReactionRef{L,N}(
-        id = init.id,
-        stoich = init.stoich,
-        rate = stateindex!(Int, indref)
-    )
+function stateindex!(indref::Base.RefValue, r::ReactionRef{L}) where {L}
+    indref[] = indref[] + 1
+    return @set r.extent = indref[]
 end
 
-speciesvec(X::AbstractVector, idx::ReactionRef) = X[idx.rate] * speciesvec(idx.stoich)
+speciesvec(x::AbstractVector, idx::ReactionRef{L}) where L = x[idx.extent] .* speciesvec(idx.stoich)
 
 function Base.getindex(x::AbstractVector{T}, idx::ReactionRef{L}) where {L,T}
     return Species{L}(speciesvec(x, idx))
@@ -186,18 +180,18 @@ stateindex!(indref::Base.RefValue, reactions::Vector{<:ReactionRef})
 
 Fills out state index information for `reactions`, retuns the reference of the indexer (holding the last state index)
 """
-function stateindex!(reactions::Vector{T}, indref::RefValue) where T <:ReactionRef
-    for ii in eachindex(reactions)
-        reactions[ii] = stateindex!(T, indref, reactions[ii])
+function stateindex!(indref::Base.RefValue, reactions::Vector{<:ReactionRef})
+    for (ii, reaction) in enumerate(reactions)
+        reactions[ii] = stateindex!(indref, reaction)
     end
-    return reactions
+    return indref
 end
 
 
 #=============================================================================
 Stoichometric relationships between Species vectors and reaction coefficients
 =============================================================================#
-#=
+
 #Find the extent of reaction based on 
 #It is based on which species are consumed (negative values means species is consumed)
 #Species that are NOT CONSUMED have an infinite extent (they don't limit the extent of reaction)
@@ -213,14 +207,43 @@ Finds maximum reaction extent based on stoichiometry and the limiting reagent
 """
 stoich_extent(stoich::Species{L}, reagents::Species{L}) where L = mapreduce(_reagent_extent, min, stoich[:], reagents[:])
 stoich_extent(reaction::ReactionRef{L}, reagents::Species{L}) where L = stoich_extent(reaction.stoich, reagents)
-=#
+
+
+
+#=============================================================================
+Construction info for nodes
+=============================================================================#
+@kwdef struct NodeInfo <: AbstractInfo
+    id        :: Symbol
+    stdev     :: Dict{Symbol, Float64}
+    inlets    :: Vector{Symbol}
+    outlets   :: Vector{Symbol}
+    reactions :: Vector{Dict{Symbol, Float64}} = Dict{Symbol, Float64}[]
+end
+
+function NodeInfo(d::AbstractDict{Symbol})
+    return NodeInfo(
+        id = Symbol(d[:id]),
+        stdev  = symbolize(Float64, d[:stdev]),
+        inlets = symbolize(d[:inlets]),
+        outlets = symbolize(d[:outlets]),
+        reactions = symbolize.(Float64, d[:reactions])
+    )
+end
+
+NodeInfo(d::AbstractDict{<:AbstractString}) = NodeInfo(symbolize(d))
+
+function add_reaction!(nodeinfo::NodeInfo, stoich::Species)
+    push!(nodeinfo.reactions, ReactionRef{L,N}(0, stoich))
+end
+
 
 #=============================================================================
 Process nodes
 =============================================================================#
 @kwdef struct NodeRef{L, N}
     id :: Symbol
-    stdev     :: Float64
+    stdev     :: Species{L, Float64, N}
     inlets    :: Vector{StreamRef{L, N}}
     outlets   :: Vector{StreamRef{L, N}}
     reactions :: Vector{ReactionRef{L, N}}
@@ -229,30 +252,29 @@ end
 function NodeRef{L}(info::NodeInfo, streamdict::Dict{Symbol, <:StreamRef}) where L
     return NodeRef{L, length(L)}(
         id        = info.id,
-        stdev     = info.stdev,
+        stdev     = Species{L}(info.stdev),
         inlets    = [streamdict[id] for id in info.inlets],
         outlets   = [streamdict[id] for id in info.outlets],
         reactions = [ReactionRef{L}(id=info.id, stoich) for stoich in info.reactions]
     )
 end
 
-function stateindex!(noderef::NodeRef{L}, indref::Base.RefValue) where {L}
-    return stateindex!(noderef.reactions, indref)
+
+
+function stateindex!(indref::Base.RefValue, noderef::NodeRef{L}) where {L}
+    return stateindex!(indref, noderef.reactions)
 end
 
-function stateindex!(noderefs::Vector{<:NodeRef}, indref::Base.RefValue)
+function stateindex!(indref::Base.RefValue, noderefs::Vector{<:NodeRef})
     for noderef in noderefs
-        stateindex!(noderef, indref)
+        stateindex!(indref, noderef)
     end
-    return noderefs
+    return indref
 end
-
-
 
 #=============================================================================
 Construction info for simple stream relationshps, useful for predictions
 =============================================================================#
-#=
 @kwdef struct StreamRelationship
     id     :: Symbol
     parent :: Symbol
@@ -284,5 +306,3 @@ function state_transition(Nx::Int, relationships::Vector{StreamRelationship}, st
 
     return transmat
 end
-=#
-
